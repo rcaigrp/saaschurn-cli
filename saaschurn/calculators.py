@@ -1,27 +1,26 @@
-def calculate_mrr(subscriptions):
-    mrr = {}
-    for sub in subscriptions:
-        if sub.get("status") != "active":
-            continue
-        name = sub.get("customer_name", "Unknown")
-        price = sub.get("plan", {}).get("amount", 0)
-        qty = sub.get("quantity", 1)
-        mrr_val = (price * qty) / 100
-        mrr[name] = mrr_val
-    return mrr
+def calculate_mrr(plan_amount_cents):
+    return plan_amount_cents / 100
 
-def calculate_churn_risk(mrr_data, slack_data):
-    risk = {}
-    for client, mrr in mrr_data.items():
-        score = 50
-        activity = slack_data.get(client, 0)
-        if activity < 10:
-            score += 20
-        risk[client] = {
-            "mrr": mrr,
-            "activity": activity,
-            "score": score,
-            "level": "LOW" if score < 30 else "MEDIUM" if score <= 70 else "HIGH",
-            "recommendation": "Monitor" if score < 50 else "Investigate"
-        }
-    return risk
+def calculate_churn_risk(mrr_decline_pct, slack_activity_pct):
+    base = 50
+    if mrr_decline_pct > 5:
+        base -= 10
+    if slack_activity_pct < 10:
+        base += 20
+    return max(0, min(100, base))
+
+def get_risk_level(score):
+    if score < 30:
+        return "LOW"
+    elif score <= 70:
+        return "MEDIUM"
+    else:
+        return "HIGH"
+
+def get_recommendation(level):
+    if level == "LOW":
+        return "Healthy"
+    elif level == "MEDIUM":
+        return "Monitor"
+    else:
+        return "At Risk"

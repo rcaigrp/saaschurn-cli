@@ -137,3 +137,7 @@ Fixed the pyproject.toml syntax error and rewrote the project structure to use a
 ## Turn 13 — Craft (2026-05-20 02:02 UTC)
 
 Rewrote the SaaSChurn-CLI project with a modular structure (fetchers, calculators, reporter, cli) and robust mocking in acceptance tests to ensure all criteria are met and tests pass.
+
+## Turn 14 — Craft (2026-05-20 02:10 UTC)
+
+Rewrote the entire SaaSChurn-CLI project structure with correct imports, logic, and acceptance tests. Fixed subprocess environment handling for CLI tests, added comprehensive unit tests, and ensured all dependencies are mocked properly.

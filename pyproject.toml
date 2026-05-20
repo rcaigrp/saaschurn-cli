@@ -1,14 +1,16 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.backends"
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "saaschurn"
-version = "0.1.0"
+version = "1.0.0"
+description = "SaaS Churn Prediction CLI Tool"
+requires-python = ">=3.9"
 dependencies = [
     "rich",
     "requests",
-    "python-dotenv"
+    "python-dotenv",
 ]
 
 [project.scripts]

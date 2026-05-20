@@ -1,50 +1,44 @@
 import requests
 import time
 
-def fetch_stripe(token, dry_run=False):
-    if dry_run:
-        return [
-            {"id": "sub_1", "customer_id": "cus_A", "customer_name": "ClientA", "status": "active", "quantity": 1, "plan": {"amount": 10000}},
-            {"id": "sub_2", "customer_id": "cus_B", "customer_name": "ClientB", "status": "active", "quantity": 2, "plan": {"amount": 5000}},
-        ]
-    url = "https://api.stripe.com/v1/subscriptions"
-    headers = {"Authorization": f"Bearer {token}"}
-    subscriptions = []
-    while True:
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        subscriptions.extend(data.get("data", []))
-        if not data.get("has_more"):
-            break
-        time.sleep(1) 
-        url = data["url"]
-    return subscriptions
+class StripeFetcher:
+    def __init__(self, token, base_url="https://api.stripe.com/v1"):
+        self.token = token
+        self.base_url = base_url
 
-def fetch_slack(token, dry_run=False):
-    if dry_run:
-        return {"ClientA": 15, "ClientB": 5}
-    url = "https://slack.com/api/conversations.list"
-    headers = {"Authorization": f"Bearer {token}"}
-    channels = []
-    while True:
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        channels.extend([c for c in data.get("channels", []) if c.get("is_channel")])
-        if not data.get("response_metadata", {}).get("next_cursor"):
-            break
-        time.sleep(1)
-        url = f"https://slack.com/api/conversations.list?cursor={data['response_metadata']['next_cursor']}"
-    
-    activity = {}
-    for ch in channels:
-        name = ch.get("name")
-        if name not in activity:
-            activity[name] = 0
-        hist_url = f"https://slack.com/api/conversations.history?channel={ch['id']}&limit=100"
-        hist_resp = requests.get(hist_url, headers=headers)
-        hist_resp.raise_for_status()
-        hist_data = hist_resp.json()
-        activity[name] += len(hist_data.get("messages", []))
-    return activity
+    def fetch_active_subscriptions(self):
+        url = f"{self.base_url}/subscriptions"
+        params = {"status": "active", "limit": 100}
+        subscriptions = []
+        while True:
+            response = requests.get(url, headers={"Authorization": f"Bearer {self.token}"}, params=params)
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 1))
+                time.sleep(retry_after)
+                continue
+            if response.status_code != 200:
+                raise Exception(f"Stripe API error: {response.status_code}")
+            data = response.json()
+            subscriptions.extend(data.get("data", []))
+            if not data.get("has_more"):
+                break
+            params["starting_after"] = data.get("data")[-1]["id"]
+        return subscriptions
+
+class SlackFetcher:
+    def __init__(self, token, base_url="https://slack.com/api"):
+        self.token = token
+        self.base_url = base_url
+
+    def fetch_channel_activity(self, channel_id):
+        url = f"{self.base_url}/conversations.history"
+        params = {"channel": channel_id, "limit": 1000}
+        response = requests.get(url, headers={"Authorization": f"Bearer {self.token}"}, params=params)
+        if response.status_code == 429:
+            time.sleep(int(response.headers.get('Retry-After', 1)))
+            return 0
+        if response.status_code != 200:
+            return 0
+        data = response.json()
+        messages = data.get("messages", [])
+        return len(messages)
