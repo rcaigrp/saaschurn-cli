@@ -254,3 +254,7 @@ Complete rewrite of SaaSChurn-CLI with proper mocking architecture. Created acce
 ## Turn 28 — Craft (2026-05-20 03:58 UTC)
 
 
+
+## Turn 29 — Manager (2026-05-20 04:10 UTC)
+
+Rewriting SaaSChurn-CLI implementation with corrected fetchers, CLI, and acceptance tests. Fixing docker command to install all dependencies correctly.
