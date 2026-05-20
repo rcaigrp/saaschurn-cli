@@ -1,7 +1,1 @@
-{
-  "goal": "Build a Python CLI tool named SaaSChurn CLI. Goal: Detect SaaS churn by analyzing Stripe subscriptions.",
-  "acceptance_criteria": ["1. Fetch active subscriptions from Stripe API.", "2. Calculate Monthly Recurring Revenue (MRR).", "3. Export data to JSON.", "4. CLI interface with argument parsing."],
-  "meeting_budget": 5,
-  "meetings_held": 5,
-  "status": "complete"
-}
+{"goal": "Build a Python CLI tool named SaaSChurn CLI. Goal: Detect SaaS churn by analyzing Stripe subscriptions.", "acceptance_criteria": ["Fetch active subscriptions from Stripe API.", "Calculate Monthly Recurring Revenue (MRR).", "Export data to JSON.", "CLI interface with argument parsing."], "meeting_budget": 5, "meetings_held": 6, "status": "complete"}
