@@ -1,50 +1,19 @@
-#!/usr/bin/env python3
-"""MRR and churn risk calculation logic"""
-
-
-class ChurnCalculator:
-    """Calculates churn risk scores based on MRR decline and Slack activity."""
-
-    def __init__(self):
-        self.base_score = 50
-
-    def calculate_risk(self, mrr_decline=0, slack_activity_drop=0):
-        """
-        Calculate churn risk score (0-100).
-
-        Args:
-            mrr_decline: Percentage decline in MRR
-            slack_activity_drop: Percentage drop in Slack activity
-
-        Returns:
-            dict with risk_score, risk_level, and recommendation
-        """
-        score = self.base_score
-
-        # Subtract points for MRR decline > 5%
-        if mrr_decline > 5:
-            score -= (mrr_decline - 5) * 2
-
-        # Add points for low Slack activity (< 10 msgs/day)
-        if slack_activity_drop > 50:
-            score += slack_activity_drop * 0.3
-
-        # Clamp score to 0-100
-        score = max(0, min(100, score))
-
-        # Determine risk level
-        if score < 30:
-            risk_level = 'LOW'
-            recommendation = 'Monitor - healthy engagement'
-        elif score <= 70:
-            risk_level = 'MEDIUM'
-            recommendation = 'Engage - schedule check-in'
-        else:
-            risk_level = 'HIGH'
-            recommendation = 'Escalate - immediate outreach needed'
-
-        return {
-            'risk_score': round(score, 1),
-            'risk_level': risk_level,
-            'recommendation': recommendation
-        }
+def calculate_churn_risk(stripe_data, slack_data):
+    results = []
+    for sub in stripe_data:
+        mrr = sub['mrr']
+        activity = slack_data.get(sub['id'], 0)
+        
+        risk = 50
+        if mrr < 300: risk += 20
+        if activity < 20: risk += 30
+        risk = min(risk, 100)
+        
+        results.append({
+            'client': sub['id'],
+            'mrr': mrr,
+            'activity_score': activity,
+            'churn_risk': risk,
+            'recommendation': 'HIGH RISK' if risk > 70 else 'MEDIUM RISK' if risk > 30 else 'LOW RISK'
+        })
+    return results
