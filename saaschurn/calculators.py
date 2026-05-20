@@ -1,11 +1,23 @@
-def calculate_churn_risk(mrr, previous_mrr, slack_activity):
-    """Calculate churn risk score based on MRR decline and Slack activity."""
-    score = 50
-    if previous_mrr > 0 and mrr < previous_mrr * 0.95:
-        score -= 10
-    if slack_activity < 10:
-        score += 20
-    score = max(0, min(100, score))
-    risk_level = "LOW" if score < 30 else "MEDIUM" if score <= 70 else "HIGH"
-    recommendation = "Monitor closely" if risk_level == "HIGH" else "Healthy" if risk_level == "LOW" else "Review engagement"
-    return {"score": score, "level": risk_level, "recommendation": recommendation}
+def calculate_mrr(subscription):
+    try:
+        return float(subscription.get("plan", {}).get("amount", 0)) / 100
+    except Exception:
+        return 0.0
+
+def calculate_churn_risk(mrr, activity_score):
+    base_score = 50
+    if mrr < 1000:
+        base_score -= 10
+    if activity_score < 10:
+        base_score += 20
+    elif activity_score < 50:
+        base_score += 10
+    return min(100, max(0, base_score))
+
+def get_risk_level(score):
+    if score < 30:
+        return "LOW"
+    elif score <= 70:
+        return "MEDIUM"
+    else:
+        return "HIGH"

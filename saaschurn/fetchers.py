@@ -1,55 +1,48 @@
-import os
-import time
 import requests
+import time
+import os
 
-
-def fetch_stripe_subscriptions(stripe_token):
-    """Fetch active subscriptions from Stripe API."""
-    headers = {"Authorization": f"Bearer {stripe_token}"}
+def fetch_stripe_subscriptions(token):
     url = "https://api.stripe.com/v1/subscriptions"
-    params = {"status": "active"}
-    all_subs = []
-    next_url = url
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {"limit": 100}
+    subscriptions = []
+    page = 0
     while True:
         try:
-            resp = requests.get(next_url, headers=headers, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            if "data" in data:
-                all_subs.extend(data["data"])
-                if "next_page" in data:
-                    next_url = data["next_page"]
-                else:
-                    break
-            else:
-                break
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                time.sleep(2 ** len(all_subs))
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code == 429:
+                wait_time = 2 ** page
+                time.sleep(wait_time)
+                page += 1
                 continue
-            raise
-    return all_subs
+            response.raise_for_status()
+            data = response.json()
+            subscriptions.extend(data.get("data", []))
+            if not data.get("has_more"):
+                break
+            params["starting_after"] = data.get("last_cursor")
+            page += 1
+        except Exception as e:
+            print(f"Error fetching Stripe: {e}")
+            break
+    return subscriptions
 
-
-def fetch_slack_activity(slack_token):
-    """Fetch channel activity from Slack API."""
-    headers = {"Authorization": f"Bearer {slack_token}"}
-    url = "https://slack.com/api/conversations.history"
-    channels = ["client-alpha", "client-beta", "client-gamma"]
+def fetch_slack_activity(token, channel_ids):
+    url = "https://api.slack.com/methods/conversations.history"
+    headers = {"Authorization": f"Bearer {token}"}
     activity = {}
-    for channel in channels:
-        params = {"channel": channel, "count": 1000}
+    for cid in channel_ids:
+        params = {"channel": cid}
         try:
-            resp = requests.get(url, headers=headers, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            if "messages" in data:
-                activity[channel] = len(data["messages"])
-            else:
-                activity[channel] = 0
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code == 429:
                 time.sleep(2)
                 continue
-            activity[channel] = 0
+            response.raise_for_status()
+            data = response.json()
+            activity[cid] = len(data.get("messages", []))
+        except Exception as e:
+            print(f"Error fetching Slack for {cid}: {e}")
+            activity[cid] = 0
     return activity

@@ -1,49 +1,59 @@
 import argparse
-import sys
 import os
+import json
+import sys
 from dotenv import load_dotenv
 from saaschurn.fetchers import fetch_stripe_subscriptions, fetch_slack_activity
-from saaschurn.calculators import calculate_churn_risk
-from saaschurn.reporter import print_table, export_json
+from saaschurn.calculators import calculate_mrr, calculate_churn_risk, get_risk_level
+from saaschurn.reporter import generate_report
 
 def main():
     parser = argparse.ArgumentParser(description="SaaS Churn CLI")
-    parser.add_argument("command", choices=["health"], help="Command to run")
-    parser.add_argument("--dry-run", action="store_true", help="Skip API calls and use mock data")
-    parser.add_argument("--output", choices=["json"], help="Export results as JSON")
-    parser.add_argument("--env", type=str, default=".env", help="Path to .env file")
+    parser.add_argument("command", choices=["health"])
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--output", choices=["json"])
+    parser.add_argument("--env", type=str, default=".env")
+
     args = parser.parse_args()
 
     load_dotenv(args.env)
     stripe_token = os.getenv("STRIPE_API_TOKEN")
     slack_token = os.getenv("SLACK_API_TOKEN")
 
-    if args.command == "health":
-        if args.dry_run:
-            data = [
-                {"client": "client-alpha", "mrr": 1000, "activity": 15, "score": 50, "level": "MEDIUM", "recommendation": "Review engagement"},
-                {"client": "client-beta", "mrr": 500, "activity": 5, "score": 70, "level": "MEDIUM", "recommendation": "Review engagement"},
-                {"client": "client-gamma", "mrr": 200, "activity": 2, "score": 90, "level": "HIGH", "recommendation": "Monitor closely"}
-            ]
-        else:
-            if not stripe_token or not slack_token:
-                print("Error: STRIPE_API_TOKEN and SLACK_API_TOKEN must be set.")
-                sys.exit(1)
-            stripe_subs = fetch_stripe_subscriptions(stripe_token)
-            slack_activity = fetch_slack_activity(slack_token)
-            data = []
-            for sub in stripe_subs:
-                client = sub.get("customer_id", "unknown")
-                mrr = sub.get("amount", 0) / 100
-                previous_mrr = sub.get("previous_amount", 0) / 100
-                activity = slack_activity.get(client, 0)
-                risk = calculate_churn_risk(mrr, previous_mrr, activity)
-                data.append({"client": client, "mrr": mrr, "activity": activity, "score": risk["score"], "level": risk["level"], "recommendation": risk["recommendation"]})
+    if not stripe_token or not slack_token:
+        print("Error: Missing Stripe or Slack API tokens in environment variables.")
+        return
 
-        if args.output == "json":
-            export_json(data)
-        else:
-            print_table(data)
+    if args.dry_run:
+        results = [
+            {"client": "Acme Corp", "mrr": 5000.0, "activity": 5, "risk_score": 75, "risk_level": "HIGH", "recommendation": "Immediate outreach required."},
+            {"client": "Globex Inc", "mrr": 1500.0, "activity": 45, "risk_score": 35, "risk_level": "MEDIUM", "recommendation": "Monitor closely."}
+        ]
+    else:
+        subs = fetch_stripe_subscriptions(stripe_token)
+        channel_ids = [sub.get("customer_id") for sub in subs]
+        activity = fetch_slack_activity(slack_token, channel_ids)
+        
+        results = []
+        for sub in subs:
+            client = sub.get("customer_id")
+            mrr = calculate_mrr(sub)
+            act_score = activity.get(client, 0)
+            risk_score = calculate_churn_risk(mrr, act_score)
+            risk_level = get_risk_level(risk_score)
+            results.append({
+                "client": client,
+                "mrr": mrr,
+                "activity": act_score,
+                "risk_score": risk_score,
+                "risk_level": risk_level,
+                "recommendation": f"Focus on {risk_level} risk."
+            })
+
+    if args.output == "json":
+        print(json.dumps(results, default=str))
+    else:
+        generate_report(results)
 
 if __name__ == "__main__":
     main()
