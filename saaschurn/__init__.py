@@ -1,1 +1,1 @@
-# saaschurn package
+# saaschurn/__init__.py
