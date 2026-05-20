@@ -1,14 +1,13 @@
-def calculate_mrr(sub):
-    """Calculate MRR for a subscription."""
-    unit_amount = sub.get('plan', {}).get('unit_amount', 0)
-    return unit_amount / 100  # Stripe uses cents
+def calculate_mrr(subscriptions):
+    mrr = 0
+    for sub in subscriptions.get('data', []):
+        mrr += sub.get('plan', {}).get('amount', 0)
+    return mrr
 
-
-def calculate_churn_risk(mrr, activity_score):
-    """Calculate churn risk score (0-100)."""
-    base_score = 50
-    if mrr < 1000:  # Example threshold
-        base_score += 10
-    if activity_score < 10:
-        base_score += 20
-    return min(base_score, 100)
+def calculate_churn_score(mrr_data, slack_activity_data):
+    score = 50
+    if mrr_data.get('decline', 0) > 5:
+        score -= 10
+    if slack_activity_data.get('activity', 0) < 10:
+        score += 20
+    return score

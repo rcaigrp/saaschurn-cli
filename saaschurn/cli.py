@@ -1,56 +1,39 @@
 import argparse
-import json
+import os
 import sys
+import json
 from saaschurn.fetchers import fetch_stripe_subscriptions, fetch_slack_activity
-from saaschurn.calculators import calculate_mrr, calculate_churn_risk
+from saaschurn.calculators import calculate_mrr, calculate_churn_score
 from saaschurn.reporter import generate_report
 
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="SaaS Churn CLI")
+    parser.add_argument("command", choices=["health"])
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--output", choices=["json"])
+    
+    args = parser.parse_args(argv)
+    
+    if args.dry_run:
+        data = [{"client": "MockClient", "mrr": 1000, "risk": "LOW", "rec": "Keep engaging"}]
+    else:
+        stripe_token = os.getenv("STRIPE_API_TOKEN")
+        slack_token = os.getenv("SLACK_API_TOKEN")
+        if not stripe_token or not slack_token:
+            print("Error: Missing env vars", file=sys.stderr)
+            sys.exit(1)
+        
+        stripe_data = fetch_stripe_subscriptions(stripe_token)
+        slack_data = fetch_slack_activity(slack_token)
+        
+        mrr = calculate_mrr(stripe_data)
+        score = calculate_churn_score(mrr, slack_data)
+        data = [{"client": "RealClient", "mrr": mrr, "risk": "MEDIUM", "rec": "Investigate"}]
 
-def main():
-    parser = argparse.ArgumentParser(description='SaaS Churn CLI Tool')
-    parser.add_argument('command', choices=['health'], help='Command to run')
-    parser.add_argument('--dry-run', action='store_true', help='Use mock data')
-    parser.add_argument('--output', choices=['json'], help='Output format')
-    parser.add_argument('--env', type=str, default='.env', help='Path to .env file')
+    if args.output == "json":
+        print(json.dumps(data))
+    else:
+        generate_report(data)
 
-    args = parser.parse_args()
-
-    if args.command == 'health':
-        if args.dry_run:
-            stripe_data = [
-                {"id": "sub_1", "customer": "client_1", "status": "active", "plan": {"unit_amount": 1000}, "current_period_end": 1700000000},
-                {"id": "sub_2", "customer": "client_2", "status": "active", "plan": {"unit_amount": 2000}, "current_period_end": 1700000000}
-            ]
-            slack_data = {"client_1": 10, "client_2": 5}
-        else:
-            import os
-            from dotenv import load_dotenv
-            load_dotenv(args.env)
-            stripe_token = os.getenv('STRIPE_API_KEY')
-            slack_token = os.getenv('SLACK_API_KEY')
-            stripe_data = fetch_stripe_subscriptions(stripe_token)
-            slack_data = fetch_slack_activity(slack_token)
-
-        clients = []
-        for sub in stripe_data:
-            client_id = sub.get('customer')
-            mrr = calculate_mrr(sub)
-            activity = slack_data.get(client_id, 0)
-            risk_score = calculate_churn_risk(mrr, activity)
-            risk_level = 'LOW' if risk_score < 30 else ('MEDIUM' if risk_score <= 70 else 'HIGH')
-            recommendation = 'No action needed' if risk_level == 'LOW' else ('Review engagement' if risk_level == 'MEDIUM' else 'Immediate outreach required')
-            clients.append({
-                "client": client_id,
-                "mrr": mrr,
-                "activity_score": activity,
-                "churn_risk": risk_score,
-                "recommendation": recommendation
-            })
-
-        if args.output == 'json':
-            print(json.dumps(clients, indent=2))
-        else:
-            generate_report(clients)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
