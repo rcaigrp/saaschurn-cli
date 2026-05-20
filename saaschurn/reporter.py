@@ -1,30 +1,13 @@
 from rich.table import Table
-from rich.console import Console
+from rich import print
 
-class Reporter:
-    def __init__(self):
-        self.console = Console()
-
-    def print_report(self, data, json_output=False):
-        if json_output:
-            import json
-            print(json.dumps(data))
-        else:
-            table = Table(show_header=True, header_style="bold magenta")
-            table.add_column("Client", style="dim")
-            table.add_column("MRR", style="green")
-            table.add_column("Activity", style="cyan")
-            table.add_column("Risk", style="red")
-            table.add_column("Recommendation")
-            
-            for item in data:
-                risk = item.get("risk_score", 0)
-                color = "red" if risk > 70 else ("yellow" if risk > 30 else "green")
-                table.add_row(
-                    item.get("client", "N/A"),
-                    f"${item.get('mrr', 0)}",
-                    str(item.get("activity", 0)),
-                    str(risk),
-                    item.get("recommendation", "N/A")
-                )
-            self.console.print(table)
+def generate_report(data):
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Client")
+    table.add_column("MRR")
+    table.add_column("Activity")
+    table.add_column("Risk")
+    table.add_column("Recommendation")
+    for item in data:
+        table.add_row(str(item.get("client_id")), str(item.get("mrr")), str(item.get("slack_activity")), str(item.get("churn_risk")), str(item.get("recommendation")))
+    print(table)
