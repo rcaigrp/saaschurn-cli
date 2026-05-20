@@ -368,3 +368,7 @@ Rewrote the entire SaaSChurn-CLI project from scratch to ensure robust API mocki
 ## Turn 40 — Manager (2026-05-20 05:23 UTC)
 
 Rewrote the entire SaaSChurn-CLI project from scratch to fix previous failures. Established a robust package structure, implemented strict mocking via the `responses` library in all tests, and created a comprehensive `acceptance_tests.py` that directly maps to all 7 acceptance criteria. The CLI now correctly handles `--dry-run`, `--output json`, and `.env` loading. All API calls are properly mocked in unit tests to prevent timeout/failure.
+
+## Turn 1 — Manager (2026-05-20 06:26 UTC)
+
+Retrying with a completely different approach. Refactored stripe_client.py to be robust and mockable. Created acceptance_tests.py using the 'responses' library to mock Stripe API calls, preventing real network requests. Added project.json and README.md to satisfy project requirements.

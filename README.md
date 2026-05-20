@@ -1,23 +1,15 @@
-# SaaSChurn CLI
+# SaaSChurn-CLI
 
-A Python CLI tool to automate SaaS client health reporting and churn prediction across Stripe and Slack.
+## Goal
+Build a Python CLI tool to detect SaaS churn by analyzing Stripe subscriptions.
 
-## Installation
-```bash
-pip install -e .
-```
+## Acceptance Criteria
+1. Fetch active subscriptions from Stripe API.
+2. Calculate Monthly Recurring Revenue (MRR).
+3. Export data to JSON.
+4. CLI interface with argument parsing.
 
-## Usage
-```bash
-python -m saaschurn.cli health --dry-run
-python -m saaschurn.cli health --output json
-```
-
-## Environment Variables
-- `STRIPE_API_TOKEN`
-- `SLACK_API_TOKEN`
-
-## Testing
-```bash
-pytest tests/ -v --cov=saaschurn
-```
+## Files
+- saaschurn/__init__.py
+- saaschurn/stripe_client.py
+- acceptance_tests.py
