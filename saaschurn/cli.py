@@ -1,49 +1,32 @@
 import argparse
-import json
+import sys
 import os
 
-from saaschurn.fetchers import StripeFetcher, SlackFetcher
-from saaschurn.calculators import ChurnCalculator
-from saaschurn.reporter import Reporter
-
+from dotenv import load_dotenv
+from saaschurn.fetchers import fetch_stripe_data, fetch_slack_data
+from saaschurn.calculators import calculate_churn_risk
+from saaschurn.reporter import generate_report
 
 def main():
-    parser = argparse.ArgumentParser(description="SaaS Churn CLI Tool")
-    parser.add_argument("command", choices=["health"])
-    parser.add_argument("--dry-run", action="store_true", help="Use mock data")
-    parser.add_argument("--output", choices=["json", "console"], default="console", help="Output format")
-    parser.add_argument("--env", type=str, default=".env", help="Path to .env file")
-
+    load_dotenv()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command', choices=['health'])
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--output', choices=['json', 'table'], default='table')
     args = parser.parse_args()
 
-    if args.command == "health":
-        load_env(args.env)
-
-        stripe = StripeFetcher(stripe_api_key=os.getenv("STRIPE_API_KEY"))
-        slack = SlackFetcher(slack_api_token=os.getenv("SLACK_API_TOKEN"))
-
+    if args.command == 'health':
         if args.dry_run:
-            stripe = StripeFetcher(mock=True)
-            slack = SlackFetcher(mock=True)
-
-        subscriptions = stripe.fetch_active_subscriptions()
-        channel_activity = slack.fetch_channel_activity()
-
-        calculator = ChurnCalculator(subscriptions, channel_activity)
-        results = calculator.calculate_churn_risk()
-
-        reporter = Reporter(results)
-
-        if args.output == "json":
-            print(json.dumps(results, indent=2))
+            stripe_data = [{'customer': 'cus_1', 'plan': {'amount': 10000}}]
+            slack_data = []
         else:
-            reporter.print_table()
+            stripe_data = fetch_stripe_data()
+            slack_data = fetch_slack_data()
+        results = calculate_churn_risk(stripe_data, slack_data)
+        generate_report(results, dry_run=args.dry_run, output_format=args.output)
+    else:
+        print("Unknown command")
+        sys.exit(1)
 
-
-def load_env(path):
-    from dotenv import load_dotenv
-    load_dotenv(path)
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
