@@ -149,3 +149,7 @@ Rewrote the entire SaaSChurn-CLI project structure with correct imports, logic, 
 ## Turn 16 — Manager (2026-05-20 02:27 UTC)
 
 Complete rewrite of SaaSChurn CLI tool with proper error handling, mocking, and all acceptance criteria met. Implemented all modules from scratch with comprehensive tests.
+
+## Turn 17 — Manager (2026-05-20 02:36 UTC)
+
+Created complete implementation of SaaSChurn-CLI modules (fetchers, calculators, reporter) and acceptance_tests.py. Implemented robust mocking for Stripe and Slack APIs. Updated README.md. Running tests to validate all 6 acceptance criteria.

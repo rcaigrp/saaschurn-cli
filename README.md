@@ -12,13 +12,14 @@ Build a Python CLI tool (SaaSChurn-CLI) that authenticates via environment varia
 - Support dry-run mode and JSON export.
 
 ## Sprint Status
-- **Meetings Held**: 1
-- **Meetings Left**: 4
+- **Meetings Held**: 2
+- **Meetings Left**: 3
 - **Status**: Active
 
 ## Completed Work
-- Created `main.py` with core logic for auth, fetching, calculation, and reporting.
+- Created `saaschurn/fetchers.py`, `saaschurn/calculators.py`, `saaschurn/reporter.py`, `saaschurn/cli.py`.
 - Created `acceptance_tests.py` with mocked tests for all acceptance criteria.
+- Implemented robust mocking for Stripe and Slack APIs.
 
 ## Test Results
 - Tests defined and ready for execution.

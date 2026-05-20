@@ -1,41 +1,33 @@
-from typing import List
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
 
+def print_report(results):
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("Client")
+    table.add_column("MRR")
+    table.add_column("Activity Score")
+    table.add_column("Churn Risk")
+    table.add_column("Recommendation")
 
-def print_report(report: List[dict]):
-    """Print formatted churn report using rich tables.
-    
-    Args:
-        report: List of churn report data.
-    """
-    table = Table(title="SaaS Churn Risk Report")
-    table.add_column("Client", style="cyan")
-    table.add_column("MRR", style="green")
-    table.add_column("Activity Score", style="yellow")
-    table.add_column("Churn Risk", style="red")
-    table.add_column("Recommendation", style="magenta")
-    
-    for entry in report:
-        risk_level = entry.get("risk_level", "")
-        risk_score = entry.get("churn_risk", 0)
-        
-        # Color-code rows by risk level
-        if risk_level == "LOW":
-            style = "green"
-        elif risk_level == "MEDIUM":
-            style = "yellow"
+    for r in results:
+        risk = r.get("churn_risk", 0)
+        rec = "Review"
+        if risk > 70:
+            rec = "High Churn Risk"
+        elif risk > 30:
+            rec = "Monitor"
         else:
-            style = "red"
+            rec = "Healthy"
         
+        color = "green" if risk <= 30 else ("yellow" if risk <= 70 else "red")
+        console.print(f"[{color}]{r.get('client')}[/]") # Just for demo
         table.add_row(
-            entry.get("client", ""),
-            f"${entry.get('mrr', 0):,.2f}",
-            f"{entry.get('activity_score', 0):.1f} msgs/day",
-            f"{risk_score}/100",
-            entry.get("recommendation", "")
+            r.get("client", "N/A"),
+            f"${r.get('mrr', 0):.2f}",
+            str(r.get("activity_score", 0)),
+            str(r.get("churn_risk", 0)),
+            rec
         )
-    
     console.print(table)
