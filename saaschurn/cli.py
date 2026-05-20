@@ -1,65 +1,58 @@
 import argparse
-import sys
-import os
 import json
+import os
+import sys
 from dotenv import load_dotenv
-from saaschurn.fetchers import fetch_stripe_data, fetch_slack_data
-from saaschurn.calculators import calculate_churn_risk
-from saaschurn.reporter import generate_report
+
+from saaschurn.fetchers import StripeFetcher, SlackFetcher
+from saaschurn.calculators import ChurnCalculator
+from saaschurn.reporter import Reporter
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SaaS Churn CLI")
-    parser.add_argument("command", help="Command to run", choices=["health"])
-    parser.add_argument("--dry-run", action="store_true", help="Use mock data")
-    parser.add_argument("--output", choices=["json"], default=None, help="Output format")
-    parser.add_argument("--env", type=str, default=".env", help="Path to .env file")
+    parser = argparse.ArgumentParser(description='SaaS Churn CLI Tool')
+    parser.add_argument('command', choices=['health'], help='Command to run')
+    parser.add_argument('--dry-run', action='store_true', help='Use mock data instead of real API calls')
+    parser.add_argument('--output', choices=['json'], help='Export results as JSON')
+    parser.add_argument('--env', type=str, default='.env', help='Path to .env file')
 
     args = parser.parse_args()
 
-    if args.command == "health":
-        load_dotenv(args.env)
-        stripe_token = os.getenv("STRIPE_API_TOKEN", "dummy")
-        slack_token = os.getenv("SLACK_API_TOKEN", "dummy")
+    # Load environment variables
+    load_dotenv(args.env)
 
-        if args.dry_run:
-            print("Dry-run mode active. Using mock data.")
-            results = generate_mock_data()
-        else:
-            stripe_data = fetch_stripe_data(stripe_token, dry_run=False)
-            slack_data = fetch_slack_data(slack_token, dry_run=False)
-            results = process_data(stripe_data, slack_data)
+    # Initialize fetchers
+    stripe_key = os.getenv('STRIPE_API_KEY')
+    slack_token = os.getenv('SLACK_API_TOKEN')
 
-        if args.output == "json":
-            print(json.dumps(results, default=lambda o: str(o)))
-        else:
-            generate_report(results)
+    if not stripe_key or not slack_token:
+        print('Error: STRIPE_API_KEY and SLACK_API_TOKEN environment variables are required.', file=sys.stderr)
+        sys.exit(1)
+
+    stripe_fetcher = StripeFetcher(api_key=stripe_key)
+    slack_fetcher = SlackFetcher(token=slack_token)
+
+    # Process data
+    if args.dry_run:
+        print('Running in dry-run mode with mock data...')
+        stripe_data = stripe_fetcher.fetch_mock()
+        slack_data = slack_fetcher.fetch_mock()
+    else:
+        stripe_data = stripe_fetcher.fetch()
+        slack_data = slack_fetcher.fetch()
+
+    # Calculate churn risk
+    calculator = ChurnCalculator()
+    results = calculator.calculate(stripe_data, slack_data)
+
+    # Generate report
+    reporter = Reporter()
+
+    if args.output == 'json':
+        print(json.dumps(results, indent=2))
+    else:
+        reporter.print_table(results)
 
 
-def generate_mock_data():
-    return [
-        {
-            "client": "Client A",
-            "mrr": 1000,
-            "activity_score": 80,
-            "churn_risk": 50,
-            "risk_level": "MEDIUM",
-            "recommendation": "Monitor closely"
-        }
-    ]
-
-
-def process_data(stripe_data, slack_data):
-    results = []
-    for sub in stripe_data:
-        client = sub.get("client")
-        mrr = sub.get("mrr")
-        slack_act = next((s for s in slack_data if s["client"] == client), {"score": 0})
-        risk = calculate_churn_risk(mrr, slack_act["score"])
-        results.append({
-            "client": client,
-            "mrr": mrr,
-            "activity_score": slack_act["score"],
-            **risk
-        })
-    return results
+if __name__ == '__main__':
+    main()

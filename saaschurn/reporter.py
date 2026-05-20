@@ -1,26 +1,31 @@
-from rich.console import Console
 from rich.table import Table
+from rich.console import Console
 
 
-def generate_report(results):
-    console = Console()
-    table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Client", style="dim")
-    table.add_column("MRR", justify="right")
-    table.add_column("Activity", justify="right")
-    table.add_column("Risk", justify="right")
-    table.add_column("Recommendation", style="bold")
+class Reporter:
+    def __init__(self):
+        self.console = Console()
 
-    for r in results:
-        risk = r.get("churn_risk", 0)
-        color = "green" if risk < 30 else ("yellow" if risk <= 70 else "red")
-        table.add_row(
-            r["client"],
-            f"${r['mrr']:.2f}",
-            str(r.get("activity_score", 0)),
-            f"{risk}%",
-            r["recommendation"],
-            style=color
-        )
-        
-    console.print(table)
+    def print_table(self, results):
+        table = Table(show_header=True, header_style='bold cyan')
+        table.add_column('Client', style='white')
+        table.add_column('MRR', style='green')
+        table.add_column('Activity Score', style='yellow')
+        table.add_column('Churn Risk', style='red')
+        table.add_column('Risk Level', style='bold')
+        table.add_column('Recommendation', style='cyan')
+
+        for row in results:
+            risk_level = row['risk_level']
+            risk_style = 'green' if risk_level == 'LOW' else ('yellow' if risk_level == 'MEDIUM' else 'red')
+
+            table.add_row(
+                row['client'],
+                f"${row['mrr']:.2f}",
+                str(row['activity_score']),
+                str(row['churn_risk']),
+                f'[{risk_style}]',
+                row['recommendation']
+            )
+
+        self.console.print(table)

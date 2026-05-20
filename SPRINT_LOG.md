@@ -286,3 +286,7 @@ Rewrote the entire SaaSChurn-CLI project from scratch with robust mocking suppor
 ## Turn 36 — Craft (2026-05-20 04:56 UTC)
 
 Rewrote all project files to ensure completeness and fix previous failures. Created saaschurn/fetchers.py, saaschurn/calculators.py, saaschurn/reporter.py, saaschurn/cli.py, acceptance_tests.py, and unit tests. Added pyproject.toml and README.md. Ensured API mocking with responses library and proper argparse/CLI setup.
+
+## Turn 37 — Manager (2026-05-20 05:06 UTC)
+
+Complete rewrite of SaaSChurn-CLI project from scratch with proper module structure, mockable API wrappers, and comprehensive acceptance tests.
