@@ -1,25 +1,41 @@
+from typing import List
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
 
-def generate_report(data):
-    table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Client")
-    table.add_column("MRR")
-    table.add_column("Activity Score")
-    table.add_column("Churn Risk")
-    table.add_column("Recommendation")
 
-    for row in data:
-        risk = row.get("churn_risk", 0)
-        style = "green" if risk < 30 else "yellow" if risk < 70 else "red"
+def print_report(report: List[dict]):
+    """Print formatted churn report using rich tables.
+    
+    Args:
+        report: List of churn report data.
+    """
+    table = Table(title="SaaS Churn Risk Report")
+    table.add_column("Client", style="cyan")
+    table.add_column("MRR", style="green")
+    table.add_column("Activity Score", style="yellow")
+    table.add_column("Churn Risk", style="red")
+    table.add_column("Recommendation", style="magenta")
+    
+    for entry in report:
+        risk_level = entry.get("risk_level", "")
+        risk_score = entry.get("churn_risk", 0)
+        
+        # Color-code rows by risk level
+        if risk_level == "LOW":
+            style = "green"
+        elif risk_level == "MEDIUM":
+            style = "yellow"
+        else:
+            style = "red"
+        
         table.add_row(
-            str(row.get("client", "")),
-            f"${row.get('mrr', 0):.2f}",
-            str(row.get("activity_score", 0)),
-            str(risk),
-            row.get("recommendation", ""),
-            style=style
+            entry.get("client", ""),
+            f"${entry.get('mrr', 0):,.2f}",
+            f"{entry.get('activity_score', 0):.1f} msgs/day",
+            f"{risk_score}/100",
+            entry.get("recommendation", "")
         )
+    
     console.print(table)
