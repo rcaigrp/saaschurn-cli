@@ -1,5 +1,6 @@
 README.md
 pyproject.toml
+setup.py
 saaschurn/__init__.py
 saaschurn/calculators.py
 saaschurn/cli.py
@@ -8,5 +9,6 @@ saaschurn/reporter.py
 saaschurn.egg-info/PKG-INFO
 saaschurn.egg-info/SOURCES.txt
 saaschurn.egg-info/dependency_links.txt
+saaschurn.egg-info/entry_points.txt
 saaschurn.egg-info/requires.txt
 saaschurn.egg-info/top_level.txt

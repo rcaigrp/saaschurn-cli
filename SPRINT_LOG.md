@@ -113,3 +113,7 @@ Complete rewrite of SaaSChurn-CLI project. Created acceptance_tests.py first (ma
 ## Turn 7 — Manager (2026-05-20 01:33 UTC)
 
 
+
+## Turn 8 — Manager (2026-05-20 01:39 UTC)
+
+Rewriting SaaSChurn-CLI project structure with robust setup.py and pyproject.toml to fix pip install failures. Implementing all modules (cli, fetchers, calculators, reporter) and comprehensive acceptance tests.

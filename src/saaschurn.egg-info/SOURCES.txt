@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+setup.py
+src/saaschurn.egg-info/PKG-INFO
+src/saaschurn.egg-info/SOURCES.txt
+src/saaschurn.egg-info/dependency_links.txt
+src/saaschurn.egg-info/entry_points.txt
+src/saaschurn.egg-info/requires.txt
+src/saaschurn.egg-info/top_level.txt

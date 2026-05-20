@@ -1,25 +1,45 @@
 import requests
-import os
+import time
 
-def fetch_stripe_data():
-    api_key = os.getenv('STRIPE_API_KEY')
-    if not api_key:
-        raise ValueError("STRIPE_API_KEY not set")
-    headers = {'Authorization': f'Bearer {api_key}'}
-    url = "https://api.stripe.com/v1/subscriptions"
-    params = {'status': 'active'}
-    data = []
-    next_url = url
-    while next_url:
-        resp = requests.get(next_url, headers=headers, params=params)
-        resp.raise_for_status()
-        resp_data = resp.json()
-        data.extend(resp_data.get('data', []))
-        next_url = resp_data.get('next_url')
-    return data
+class StripeFetcher:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = "https://api.stripe.com/v1/subscriptions"
 
-def fetch_slack_data():
-    token = os.getenv('SLACK_API_TOKEN')
-    if not token:
-        raise ValueError("SLACK_API_TOKEN not set")
-    return []
+    def fetch_active_subscriptions(self):
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        params = {"limit": 100}
+        all_subs = []
+        while True:
+            try:
+                response = requests.get(self.base_url, headers=headers, params=params)
+                if response.status_code == 429:
+                    time.sleep(2 ** (response.status_code // 100))
+                    continue
+                response.raise_for_status()
+                data = response.json()
+                all_subs.extend(data.get("data", []))
+                if not data.get("has_more"):
+                    break
+                params["starting_after"] = data.get("last_response", {}).get("data", [{}])[-1].get("id")
+            except requests.exceptions.RequestException:
+                break
+        return all_subs
+
+class SlackFetcher:
+    def __init__(self, token):
+        self.token = token
+        self.base_url = "https://slack.com/api/conversations.history"
+
+    def fetch_channel_activity(self, channel_id):
+        headers = {"Authorization": f"Bearer {self.token}"}
+        params = {"channel": channel_id, "limit": 100}
+        try:
+            response = requests.get(self.base_url, headers=headers, params=params)
+            if response.status_code == 429:
+                time.sleep(2)
+                return self.fetch_channel_activity(channel_id)
+            response.raise_for_status()
+            return response.json().get("messages", [])
+        except requests.exceptions.RequestException:
+            return []

@@ -1,23 +1,22 @@
-def calculate_churn_risk(stripe_data, slack_data):
-    results = []
-    for sub in stripe_data:
-        mrr = sub.get("mrr", 0)
-        activity = 0
-        for ch in slack_data:
-            if ch.get("customer_id") == sub.get("customer_id"):
-                activity = ch.get("messages", 0)
+def calculate_mrr(subscriptions):
+    mrr = 0
+    for sub in subscriptions:
+        if sub.get("status") == "active":
+            mrr += sub.get("plan", {}).get("amount", 0) / 100
+    return mrr
 
-        risk_score = 50 - (mrr * 0.1) + (activity * 0.5)
-        risk_score = max(0, min(100, risk_score))
+def calculate_churn_risk(mrr, activity_score):
+    score = 50
+    if mrr < 1000:
+        score -= 20
+    if activity_score < 10:
+        score += 30
+    return max(0, min(100, score))
 
-        risk_level = "LOW" if risk_score < 30 else ("MEDIUM" if risk_score < 70 else "HIGH")
-
-        results.append({
-            "customer_id": sub.get("customer_id"),
-            "mrr": mrr,
-            "activity_score": activity,
-            "risk_score": risk_score,
-            "risk_level": risk_level,
-            "recommendation": f"Monitor {risk_level} risk"
-        })
-    return results
+def get_risk_level(score):
+    if score < 30:
+        return "LOW"
+    elif score < 70:
+        return "MEDIUM"
+    else:
+        return "HIGH"
