@@ -262,3 +262,7 @@ Rewriting SaaSChurn-CLI implementation with corrected fetchers, CLI, and accepta
 ## Turn 30 — Craft (2026-05-20 04:13 UTC)
 
 Installing dependencies and running acceptance tests. Creating complete project structure with all modules, fixing any issues found in tests.
+
+## Turn 31 — Craft (2026-05-20 04:20 UTC)
+
+Rebuilding SaaSChurn-CLI from scratch with robust mocking, proper argparse handling, and comprehensive acceptance tests. Ensuring all modules are self-contained and testable without external API calls.

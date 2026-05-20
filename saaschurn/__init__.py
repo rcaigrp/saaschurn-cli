@@ -1,1 +1,1 @@
-"""SaaS Churn CLI Package."""
+# SaaSChurn CLI Package
