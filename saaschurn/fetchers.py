@@ -1,42 +1,82 @@
 import requests
-import os
+import time
 
-def fetch_stripe_data(api_key):
-    url = "https://api.stripe.com/v1/subscriptions"
-    headers = {"Authorization": f"Bearer {api_key}"}
-    params = {"status": "active"}
-    all_subs = []
-    while True:
-        resp = requests.get(url, headers=headers, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        for sub in data.get("data", []):
-            mrr = sub.get("amount", 0) / 100
-            all_subs.append({"id": sub.get("id"), "customer": sub.get("customer"), "mrr": mrr})
-        if not data.get("has_more"):
-            break
-        params["starting_after"] = data.get("next_cursor")
-    return all_subs
+class StripeFetcher:
+    def __init__(self, token):
+        self.token = token
+        self.base_url = "https://api.stripe.com/v1/subscriptions"
 
-def fetch_slack_data(token, channels=None):
-    url = "https://slack.com/api/conversations.history"
-    headers = {"Authorization": f"Bearer {token}"}
-    results = {}
-    if not channels:
-        return results
-    for ch in channels:
-        params = {"channel": ch, "limit": 10}
-        try:
-            resp = requests.get(url, headers=headers, params=params)
-            resp.raise_for_status()
-            messages = resp.json().get("messages", [])
-            results[ch] = len(messages)
-        except requests.exceptions.HTTPError:
-            pass
-    return results
+    def fetch_subscriptions(self):
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        subscriptions = []
+        cursor = None
+        while True:
+            params = {"limit": 100}
+            if cursor:
+                params["starting_after"] = cursor
+            try:
+                response = requests.get(self.base_url, headers=headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+            except requests.exceptions.HTTPError as e:
+                if e.response and e.response.status_code == 429:
+                    time.sleep(2 ** e.response.json().get('error', {}).get('retry_after', 5))
+                    continue
+                raise
+            except Exception:
+                raise
+            subscriptions.extend(data.get('data', []))
+            if not data.get('has_more'):
+                break
+            cursor = data.get('next_starting_after')
+        return subscriptions
 
-def get_mock_stripe_data():
-    return [{"id": "sub_1", "customer": "cust_1", "mrr": 100.0}, {"id": "sub_2", "customer": "cust_2", "mrr": 50.0}]
+class SlackFetcher:
+    def __init__(self, token):
+        self.token = token
+        self.base_url = "https://api.slack.com/methods/conversations.list"
+        self.history_url = "https://api.slack.com/methods/conversations.history"
 
-def get_mock_slack_data():
-    return {"channel_1": 50, "channel_2": 5}
+    def get_channels(self):
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        channels = []
+        cursor = None
+        while True:
+            params = {"limit": 100}
+            if cursor:
+                params["cursor"] = cursor
+            try:
+                response = requests.get(self.base_url, headers=headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+            except Exception:
+                return []
+            channels.extend([c["id"] for c in data.get("conversations", [])])
+            if not data.get("response_metadata", {}).get("next_cursor"):
+                break
+            cursor = data.get("response_metadata", {}).get("next_cursor")
+        return channels
+
+    def get_channel_activity(self, channels):
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        activity = {}
+        for channel_id in channels:
+            params = {"channel": channel_id, "limit": 1000}
+            try:
+                response = requests.get(self.history_url, headers=headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+                messages = data.get("messages", [])
+                activity[channel_id] = len(messages)
+            except Exception:
+                activity[channel_id] = 0
+        return activity
