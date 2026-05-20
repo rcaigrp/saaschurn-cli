@@ -1,46 +1,55 @@
-import requests
+import os
 import time
+import requests
 
-def fetch_stripe_data(token):
+
+def fetch_stripe_subscriptions(stripe_token):
+    """Fetch active subscriptions from Stripe API."""
+    headers = {"Authorization": f"Bearer {stripe_token}"}
     url = "https://api.stripe.com/v1/subscriptions"
-    headers = {"Authorization": f"Bearer {token}"}
     params = {"status": "active"}
-    subscriptions = []
-    
+    all_subs = []
+    next_url = url
     while True:
         try:
-            resp = requests.get(url, headers=headers, params=params)
+            resp = requests.get(next_url, headers=headers, params=params)
             resp.raise_for_status()
             data = resp.json()
-            subscriptions.extend(data.get("data", []))
-            if not data.get("has_more"):
+            if "data" in data:
+                all_subs.extend(data["data"])
+                if "next_page" in data:
+                    next_url = data["next_page"]
+                else:
+                    break
+            else:
                 break
-            params["starting_after"] = data.get("last_cursor")
-            time.sleep(0.5)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
-                time.sleep(5)
+                time.sleep(2 ** len(all_subs))
                 continue
             raise
-    return subscriptions
+    return all_subs
 
-def fetch_slack_data(token, client_names):
+
+def fetch_slack_activity(slack_token):
+    """Fetch channel activity from Slack API."""
+    headers = {"Authorization": f"Bearer {slack_token}"}
     url = "https://slack.com/api/conversations.history"
-    headers = {"Authorization": f"Bearer {token}"}
+    channels = ["client-alpha", "client-beta", "client-gamma"]
     activity = {}
-    
-    for client in client_names:
-        channel = f"#{client.lower().replace(' ', '-')}"
-        params = {"channel": channel}
+    for channel in channels:
+        params = {"channel": channel, "count": 1000}
         try:
             resp = requests.get(url, headers=headers, params=params)
             resp.raise_for_status()
             data = resp.json()
-            msgs = len(data.get("messages", []))
-            activity[client] = {"messages_count": msgs}
+            if "messages" in data:
+                activity[channel] = len(data["messages"])
+            else:
+                activity[channel] = 0
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
-                time.sleep(5)
+                time.sleep(2)
                 continue
-            activity[client] = {"messages_count": 0}
+            activity[channel] = 0
     return activity
