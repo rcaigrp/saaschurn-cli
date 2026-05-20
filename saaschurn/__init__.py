@@ -1,1 +1,1 @@
-# SaaSChurn CLI
+# saaschurn package

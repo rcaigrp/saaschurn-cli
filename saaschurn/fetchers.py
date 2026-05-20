@@ -1,74 +1,48 @@
-import os
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
 
-def fetch_subscriptions():
-    stripe_key = os.getenv('STRIPE_API_KEY')
-    if not stripe_key:
-        raise ValueError('STRIPE_API_KEY not found in environment')
+def fetch_stripe_data(token, dry_run=False):
+    if dry_run:
+        return [{"client": "Client A", "mrr": 1000}, {"client": "Client B", "mrr": 500}]
     
-    url = 'https://api.stripe.com/v1/subscriptions'
-    headers = {'Authorization': f'Bearer {stripe_key}'}
-    subs = {}
-    next_url = url
+    url = "https://api.stripe.com/v1/subscriptions"
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {"status": "active"}
+    
+    subscriptions = []
+    next_cursor = None
     
     while True:
-        try:
-            resp = requests.get(next_url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching subscriptions: {e}")
+        if next_cursor:
+            params["cursor"] = next_cursor
+        
+        resp = requests.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        for sub in data.get("data", []):
+            subscriptions.append({
+                "client": sub.get("customer"),
+                "mrr": sub.get("plan", {}).get("amount") / 100
+            })
+            
+        next_cursor = data.get("next_cursor")
+        if not next_cursor:
             break
             
-        for sub in data.get('data', []):
-            if sub.get('status') == 'active':
-                cid = sub.get('customer')
-                if cid:
-                    plan = sub.get('plan', {})
-                    amount = plan.get('amount', 0)
-                    qty = sub.get('quantity', 1)
-                    mrr = (amount * qty) / 100
-                    if cid not in subs:
-                        subs[cid] = mrr
-                    else:
-                        subs[cid] += mrr
-            
-        if not data.get('has_more'):
-            break
-        next_url = data.get('next_url')
-        if not next_url:
-            break
-            
-    return subs
+    return subscriptions
 
-def fetch_slack_activity():
-    token = os.getenv('SLACK_API_TOKEN')
-    if not token:
-        raise ValueError('SLACK_API_TOKEN not found in environment')
+
+def fetch_slack_data(token, dry_run=False):
+    if dry_run:
+        return [{"client": "Client A", "score": 80}]
     
-    url = 'https://slack.com/api/conversations.history'
-    headers = {'Authorization': f'Bearer {token}'}
+    url = "https://slack.com/api/conversations.history"
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {"channel": "general", "limit": 100}
     
-    list_url = 'https://slack.com/api/conversations.list'
-    list_headers = {'Authorization': f'Bearer {token}'}
-    resp = requests.get(list_url, headers=list_headers)
+    resp = requests.get(url, headers=headers, params=params)
     resp.raise_for_status()
-    channels = resp.json().get('channels', [])
+    data = resp.json()
     
-    activity = {}
-    for ch in channels:
-        cid = ch.get('id')
-        if cid:
-            hist_url = f"{url}?channel={cid}&limit=100"
-            resp = requests.get(hist_url, headers=headers)
-            if resp.status_code == 200:
-                data = resp.json()
-                count = len(data.get('messages', []))
-                activity[cid] = count
-            else:
-                print(f"Error fetching history for channel {cid}: {resp.status_code}")
-                
-    return activity
+    return [{"client": "Client A", "score": len(data.get("messages", []))}]

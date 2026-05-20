@@ -1,19 +1,24 @@
-def calculate_churn_risk(subscriptions, slack_activity):
-    results = []
-    for cid, mrr in subscriptions.items():
-        score = 50
-        activity = slack_activity.get(cid, 0)
+def calculate_churn_risk(mrr, activity_score):
+    score = 50
+    if mrr < 500:
+        score += 20
+    if activity_score < 10:
+        score += 30
         
-        if activity < 10:
-            score += 30  # High penalty for low activity
-            
-        if score < 30:
-            risk = 'LOW'
-        elif score <= 70:
-            risk = 'MEDIUM'
-        else:
-            risk = 'HIGH'
-            
-        rec = 'No action needed' if risk == 'LOW' else 'Monitor closely' if risk == 'MEDIUM' else 'High churn risk'
-        results.append({'client_id': cid, 'mrr': mrr, 'activity_score': activity, 'churn_risk': risk, 'recommendation': rec})
-    return results
+    score = max(0, min(100, score))
+    
+    if score < 30:
+        level = "LOW"
+        rec = "Engage proactively"
+    elif score <= 70:
+        level = "MEDIUM"
+        rec = "Monitor closely"
+    else:
+        level = "HIGH"
+        rec = "Immediate outreach required"
+        
+    return {
+        "churn_risk": score,
+        "risk_level": level,
+        "recommendation": rec
+    }

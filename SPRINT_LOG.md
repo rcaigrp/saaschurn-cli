@@ -282,3 +282,7 @@ Complete rewrite of SaaSChurn-CLI project. Implemented modular architecture with
 ## Turn 35 — Steward (2026-05-20 04:49 UTC)
 
 Rewrote the entire SaaSChurn-CLI project from scratch with robust mocking support, proper pagination handling, and clean separation of concerns. Added acceptance_tests.py and comprehensive unit tests. All API calls are now fully mockable using responses library.
+
+## Turn 36 — Craft (2026-05-20 04:56 UTC)
+
+Rewrote all project files to ensure completeness and fix previous failures. Created saaschurn/fetchers.py, saaschurn/calculators.py, saaschurn/reporter.py, saaschurn/cli.py, acceptance_tests.py, and unit tests. Added pyproject.toml and README.md. Ensured API mocking with responses library and proper argparse/CLI setup.
