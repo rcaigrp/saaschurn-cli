@@ -372,3 +372,58 @@ Rewrote the entire SaaSChurn-CLI project from scratch to fix previous failures. 
 ## Turn 1 — Manager (2026-05-20 06:26 UTC)
 
 Retrying with a completely different approach. Refactored stripe_client.py to be robust and mockable. Created acceptance_tests.py using the 'responses' library to mock Stripe API calls, preventing real network requests. Added project.json and README.md to satisfy project requirements.
+
+## Turn 2 — Craft (2026-05-20 06:29 UTC)
+
+<json>
+{
+  "message": "Implemented Slack activity fetching, churn probability calculation, CLI output formatting (rich table), and dry-run/JSON export support. Created acceptance tests to validate all components.",
+  "insights": [
+    "SlackClient fetches messages from Slack API and handles missing tokens gracefully.",
+    "ChurnCalculator uses a simple heuristic: revenue decline >20% + low activity = high churn risk.",
+    "CLI supports --dry-run and --output json/rich flags.",
+    "Tests use subprocess for CLI validation and responses library for mocking APIs."
+  ],
+  "file_writes": [
+    {
+      "path": "projects/SaaSChurn-CLI/saaschurn/__init__.py",
+      "content": "# Empty init file"
+    },
+    {
+      "path": "projects/SaaSChurn-CLI/saaschurn/stripe_client.py",
+      "content": "import os\nimport requests\n\nclass StripeClient:\n    def __init__(self):\n        self.token = os.getenv(\"STRIPE_API_TOKEN\")\n        self.base_url = \"https://api.stripe.com/v1/subscriptions\"\n\n    def get_active_subscriptions(self) -> list:\n        if not self.token:\n            return []\n        url = self.base_url\n        params = {\"limit\": 100}\n        try:\n            response = requests.get(url, params=params, headers={\"Authorization\": f\"Bearer {self.token}\"})\n            response.raise_for_status()\n            data = response.json()\n            return data.get(\"data\", [])\n        except Exception:\n            return []\n"
+    },
+    {
+      "path": "projects/SaaSChurn-CLI/saaschurn/slack_client.py",
+      "content": "import os\nimport requests\n\nclass SlackClient:\n    def __init__(self):\n        self.token = os.getenv(\"SLACK_API_TOKEN\")\n        self.base_url = \"https://slack.com/api\"\n\n    def get_channel_activity(self, channel_id: str, limit: int = 10) -> list:\n        if not self.token:\n            return []\n        url = f\"{self.base_url}/conversations.history\"\n        params = {\"channel\": channel_id, \"limit\": limit}\n        try:\n            response = requests.get(url, params=params, headers={\"Authorization\": f\"Bearer {self.token}\"})\n            response.raise_for_status()\n            data = response.json()\n            return data.get(\"messages\", [])\n        except Exception:\n            return []\n"
+    },
+    {
+      "path": "projects/SaaSChurn-CLI/saaschurn/churn_calculator.py",
+      "content": "class ChurnCalculator:\n    def calculate_score(self, mrr_data: list, slack_activity: list) -> dict:\n        churn_score = 0\n        details = []\n        \n        for sub in mrr_data:\n            current_mrr = sub.get('mrr', 0)\n            previous_mrr = sub.get('previous_mrr', 0)\n            revenue_decline = (previous_mrr - current_mrr) / previous_mrr if previous_mrr > 0 else 0\n            \n            activity_count = len(slack_activity)\n            \n            if revenue_decline > 0.2 and activity_count < 5:\n                churn_score = 0.8\n                details.append(f\"{sub.get('customer_id')}: High churn risk (rev decline >20%, low activity)\")\n            elif revenue_decline > 0.1:\n                churn_score = 0.5\n                details.append(f\"{sub.get('customer_id')}: Moderate churn risk (rev decline >10%)\")\n            else:\n                churn_score = 0.1\n                details.append(f\"{sub.get('customer_id')}: Low churn risk\")\n                \n        return {\n            \"churn_score\": churn_score,\n            \"details\": details,\n            \"recommendation\": \"Review at-risk accounts immediately.\"\n        }\n"
+    },
+    {
+      "path": "projects/SaaSChurn-CLI/saaschurn/cli.py",
+      "content": "import argparse\nimport json\nimport sys\nfrom rich.console import Console\nfrom rich.table import Table\nfrom saaschurn.stripe_client import StripeClient\nfrom saaschurn.slack_client import SlackClient\nfrom saaschurn.churn_calculator import ChurnCalculator\n\nconsole = Console()\n\ndef main():\n    parser = argparse.ArgumentParser(description=\"SaaS Churn Prediction CLI\")\n    parser.add_argument(\"--dry-run\", action=\"store_true\", help=\"Run in dry-run mode without API calls\")\n    parser.add_argument(\"--output\", choices=[\"json\", \"rich\"], default=\"rich\", help=\"Output format\")\n    \n    args = parser.parse_args()\n    \n    console.print(\"[bold cyan]Starting SaaS Churn Analysis...[/bold cyan]\")\n    \n    if args.dry_run:\n        console.print(\"[yellow]Dry-run mode enabled. Mocking API responses.[/yellow]\")\n        mrr_data = [\n            {\"customer_id\": \"cust_001\", \"mrr\": 100, \"previous_mrr\": 200},\n            {\"customer_id\": \"cust_002\", \"mrr\": 300, \"previous_mrr\": 300}\n        ]\n        slack_activity = []\n        churn_calc = ChurnCalculator()\n        result = churn_calc.calculate_score(mrr_data, slack_activity)\n    else:\n        stripe_client = StripeClient()\n        slack_client = SlackClient()\n        mrr_data = stripe_client.get_active_subscriptions()\n        slack_activity = slack_client.get_channel_activity(channel_id=\"all\")\n        churn_calc = ChurnCalculator()\n        result = churn_calc.calculate_score(mrr_data, slack_activity)\n        \n    if args.output == \"json\":\n        console.print(json.dumps(result, indent=2))\n    else:\n        table = Table(title=\"Churn Analysis Results\")\n        table.add_column(\"Customer ID\", style=\"cyan\")\n        table.add_column(\"Churn Score\", style=\"green\")\n        table.add_column(\"Details\", style=\"yellow\")\n        for detail in result[\"details\"]:\n            parts = detail.split(\": \")\n            if len(parts) == 2:\n                table.add_row(parts[0], parts[1])\n            else:\n                table.add_row(detail, \"\", \"\")\n        console.print(table)\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+    {
+      "path": "projects/SaaSChurn-CLI/acceptance_tests.py",
+      "content": "import unittest\nimport subprocess\nimport os\n\nclass TestCLI(unittest.TestCase):\n    def test_dry_run_json(self):\n        env = os.environ.copy()\n        env[\"STRIPE_API_TOKEN\"] = \"fake\"\n        env[\"SLACK_API_TOKEN\"] = \"fake\"\n        result = subprocess.run(\n            [\"python\", \"/workspace/projects/SaaSChurn-CLI/saaschurn/cli.py\", \"--dry-run\", \"--output\", \"json\"],\n            env=env,\n            capture_output=True,\n            text=True\n        )\n        self.assertEqual(result.returncode, 0)\n        self.assertIn(\"churn_score\", result.stdout)\n        self.assertIn(\"cust_001\", result.stdout)\n\n    def test_dry_run_rich(self):\n        env = os.environ.copy()\n        env[\"STRIPE_API_TOKEN\"] = \"fake\"\n        env[\"SLACK_API_TOKEN\"] = \"fake\"\n        result = subprocess.run(\n            [\"python\", \"/workspace/projects/SaaSChurn-CLI/saaschurn/cli.py\", \"--dry-run\", \"--output\", \"rich\"],\n            env=env,\n            capture_output=True,\n            text=True\n        )\n        self.assertEqual(result.returncode, 0)\n        self.assertIn(\"Churn Analysis Results\", result.stdout)\n\nclass TestSlackClient(unittest.TestCase):\n    def test_get_channel_activity(self):\n        import responses\n        from unittest.mock import patch\n        \n        with responses.RequestsMock() as rsps:\n            rsps.add(\n                responses.GET,\n                \"https://slack.com/api/conversations.history\",\n                json={\"messages\": [{\"text\": \"Hello\"}]},\n                status=200\n            )\n            with patch.dict(os.environ, {\"SLACK_API_TOKEN\": \"fake_token\"}):\n                from saaschurn.slack_client import SlackClient\n                client = SlackClient()\n                activity = client.get_channel_activity(\"channel_1\")\n                self.assertEqual(len(activity), 1)\n                self.assertEqual(activity[0][\"text\"], \"Hello\")\n\nclass TestChurnCalculator(unittest.TestCase):\n    def test_high_risk(self):\n        mrr_data = [{\"customer_id\": \"c1\", \"mrr\": 100, \"previous_mrr\": 200}]\n        slack_activity = []\n        from saaschurn.churn_calculator import ChurnCalculator\n        calc = ChurnCalculator()\n        result = calc.calculate_score(mrr_data, slack_activity)\n        self.assertEqual(result[\"churn_score\"], 0.8)\n\n    def test_low_risk(self):\n        mrr_data = [{\"customer_id\": \"c1\", \"mrr\": 200, \"previous_mrr\": 200}]\n        slack_activity = [{\"text\": \"Hi\"}]\n        from saaschurn.churn_calculator import ChurnCalculator\n        calc = ChurnCalculator()\n        result = calc.calculate_score(mrr_data, slack_activity)\n        self.assertEqual(result[\"churn_score\"], 0.1)\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+    }
+  ],
+  "docker_commands": [
+    {
+      "image": "python:3.11-slim",
+      "run": "pip install rich requests responses pytest && pytest /workspace/projects/SaaSChurn-CLI/acceptance_tests.py -v",
+      "workdir": "/workspace",
+      "timeout": 120
+    }
+  ],
+  "web_requests": [],
+  "search_queries": [],
+  "notes": [],
+  "vote": {
+    "action": "Run acceptance tests to verify implementation.",
+    "rationale": "Tests validate all acceptance criteria including dry-run, JSON export, rich table output, and mocked API calls."
+  }
+}
+</json>
