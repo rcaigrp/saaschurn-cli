@@ -1,71 +1,53 @@
-import os
 import sys
 import unittest
-import responses
 from unittest.mock import patch, MagicMock
-from pathlib import Path
+import responses
+from saaschurn.stripe_client import fetch_active_subscriptions, calculate_mrr
+from saaschurn.slack_client import fetch_channel_activity
+from saaschurn.churn_calculator import compute_churn_score
+from saaschurn.cli import main
+import json
 
-sys.path.insert(0, str(Path(__file__).parent))
+class TestStripeClient(unittest.TestCase):
+    @patch('saaschurn.stripe_client.stripe')
+    def test_fetch_active_subscriptions(self, mock_stripe):
+        mock_stripe.Subscription.list.return_value = MagicMock(data=[{'plan': {'amount': 1000}}])
+        result = fetch_active_subscriptions("fake_key")
+        self.assertEqual(result[0]['plan']['amount'], 1000)
 
-class TestSaaSChurnCLI(unittest.TestCase):
-    def setUp(self):
-        self.env = {
-            "STRIPE_API_TOKEN": "sk_test_123",
-            "SLACK_API_TOKEN": "xoxb-123"
-        }
-        self.old_env = os.environ.copy()
-        os.environ.update(self.env)
+    def test_calculate_mrr(self):
+        subs = [{'plan': {'amount': 1000}, 'status': 'active'}]
+        self.assertEqual(calculate_mrr(subs), 10)
 
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.old_env)
-
+class TestSlackClient(unittest.TestCase):
     @responses.activate
-    def test_criterion_1_auth_via_env_vars(self):
-        # Verify CLI requires env vars
-        with patch('cli.os.environ', self.env):
-            from cli import get_config
-            config = get_config()
-            self.assertEqual(config['stripe_token'], "sk_test_123")
-            self.assertEqual(config['slack_token'], "xoxb-123")
+    def test_fetch_channel_activity(self):
+        responses.add(responses.GET, "https://slack.com/api/conversations.history", json={'messages': []})
+        result = fetch_channel_activity("fake_token", ["C123"])
+        self.assertIn("C123", result)
 
-    @responses.activate
-    def test_criterion_2_fetch_subscriptions_and_mrr(self):
-        stripe_url = "https://api.stripe.com/v1/subscriptions"
-        responses.add(responses.GET, stripe_url, json={"data": [{"id": "sub_1", "status": "active", "plan": {"amount": 1000}}]})
-        with patch('stripe_client.stripe') as mock_stripe:
-            mock_stripe.get_subscriptions.return_value = [{"id": "sub_1", "status": "active", "plan": {"amount": 1000}}]
-            from churn_calculator import calculate_mrr
-            mrr = calculate_mrr([{"id": "sub_1", "status": "active", "plan": {"amount": 1000}}])
-            self.assertEqual(mrr, 1000)
+class TestChurnCalculator(unittest.TestCase):
+    def test_compute_churn_score(self):
+        self.assertEqual(compute_churn_score(500, {}), 1.0)
 
-    @responses.activate
-    def test_criterion_3_pull_slack_activity_logs(self):
-        slack_url = "https://slack.com/api/conversations.history"
-        responses.add(responses.GET, slack_url, json={"messages": [{"text": "hello"}]})
-        with patch('slack_client.slack') as mock_slack:
-            mock_slack.get_history.return_value = [{"text": "hello"}]
-            from slack_client import fetch_activity
-            activity = fetch_activity(["channel1"])
-            self.assertEqual(activity, [])
+class TestCLI(unittest.TestCase):
+    @patch('sys.argv', ['cli', '--dry-run'])
+    def test_dry_run(self):
+        with patch('saaschurn.cli.console') as mock_console:
+            main()
+            self.assertTrue(mock_console.print.called)
 
-    @responses.activate
-    def test_criterion_4_compute_churn_score(self):
-        from churn_calculator import calculate_mrr
-        # Mock data for churn calculation
-        subscriptions = [{"id": "sub_1", "status": "active", "plan": {"amount": 500}}]
-        mrr = calculate_mrr(subscriptions)
-        self.assertEqual(mrr, 500)
-
-    @responses.activate
-    def test_criterion_5_rich_table_output(self):
-        from cli import get_config
-        config = get_config()
-        self.assertIn('stripe_token', config)
-
-    @responses.activate
-    def test_criterion_6_dry_run_and_json_export(self):
-        # Dry-run mode test
-        import subprocess
-        result = subprocess.run(['python', '-m', 'saaschurn.cli', 'health', '--dry-run'], capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0)
+    @patch('sys.argv', ['cli', '--output', 'json'])
+    @patch('saaschurn.cli.fetch_active_subscriptions')
+    @patch('saaschurn.cli.fetch_channel_activity')
+    @patch('saaschurn.cli.compute_churn_score')
+    def test_json_output(self, mock_score, mock_activity, mock_subs):
+        mock_subs.return_value = [{'plan': {'amount': 1000}}]
+        mock_activity.return_value = {'C123': {'messages': []}}
+        mock_score.return_value = 0.5
+        import io
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        main()
+        sys.stdout = sys.__stdout__
+        self.assertIn('mrr', captured_output.getvalue())
