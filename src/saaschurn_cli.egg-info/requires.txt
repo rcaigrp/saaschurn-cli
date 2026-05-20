@@ -1,3 +1,4 @@
+stripe
+slack-sdk
 rich
 requests
-python-dotenv

@@ -505,3 +505,7 @@ Rewriting acceptance_tests.py to use pytest conventions and fixing cli.py to be 
     "rationale": "Ensures all 6 criteria are met before proceeding."
   }
 }
+
+## Turn 8 — Craft (2026-05-20 07:06 UTC)
+
+Fixed project structure by creating pyproject.toml with correct build-system and dependencies, and ensuring the saaschurn package directory exists with __init__.py. Verified pip install -e . succeeds.

@@ -1,9 +1,8 @@
 README.md
 pyproject.toml
-setup.py
 src/saaschurn_cli.egg-info/PKG-INFO
 src/saaschurn_cli.egg-info/SOURCES.txt
 src/saaschurn_cli.egg-info/dependency_links.txt
-src/saaschurn_cli.egg-info/entry_points.txt
 src/saaschurn_cli.egg-info/requires.txt
 src/saaschurn_cli.egg-info/top_level.txt
+tests/test_fetchers.py
