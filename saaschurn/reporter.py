@@ -1,27 +1,26 @@
-from rich.table import Table
 from rich.console import Console
+from rich.table import Table
 
 
-class Reporter:
-    def __init__(self):
-        self.console = Console()
+def generate_report(data):
+    console = Console()
+    table = Table(show_header=True, header_style="bold blue")
+    table.add_column("Client")
+    table.add_column("MRR")
+    table.add_column("Activity")
+    table.add_column("Risk")
+    table.add_column("Recommendation")
 
-    def print_table(self, data):
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Client")
-        table.add_column("MRR")
-        table.add_column("Activity Score")
-        table.add_column("Churn Risk")
-        table.add_column("Recommendation")
-        for row in data:
-            risk = row["risk"]
-            color = "green" if risk < 30 else "yellow" if risk < 70 else "red"
-            table.add_row(
-                row["client"],
-                f"${row['mrr']:.2f}",
-                str(row["activity"]),
-                str(risk),
-                row["recommendation"],
-                style=color,
-            )
-        self.console.print(table)
+    for client_id, info in data.items():
+        risk = info["risk"]
+        color = "red" if risk > 70 else ("yellow" if risk > 30 else "green")
+        recommendation = "Churn Risk" if risk > 70 else ("Monitor" if risk > 30 else "Healthy")
+        table.add_row(
+            client_id,
+            f"${info['mrr']:.2f}",
+            f"{info['activity']}",
+            f"{risk}%",
+            recommendation,
+            style=color
+        )
+    console.print(table)

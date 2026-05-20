@@ -1,14 +1,17 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.backends._main"
 
 [project]
 name = "saaschurn"
 version = "0.1.0"
-description = "SaaS Churn CLI"
+description = "SaaS Churn CLI Tool"
 requires-python = ">=3.9"
 dependencies = [
     "rich",
     "requests",
-    "python-dotenv",
+    "python-dotenv"
 ]
+
+[tool.pytest.ini_options]
+addopts = "-v"

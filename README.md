@@ -1,32 +1,23 @@
-# SaaSChurn-CLI
+# SaaSChurn CLI
 
-## Goal
-Build a Python CLI tool (SaaSChurn-CLI) that authenticates via environment variables for Stripe and Slack API tokens. It fetches active subscriptions, calculates MRR, pulls Slack workspace activity logs for associated client channels, and computes a churn probability score based on revenue decline and activity drop. Outputs a formatted `rich` terminal table with actionable insights. Supports dry-run mode and JSON export.
+A Python CLI tool to automate SaaS client health reporting and churn prediction across Stripe and Slack.
 
-## Acceptance Criteria
-- Authenticate via environment variables for Stripe and Slack API tokens.
-- Fetch active subscriptions from Stripe and calculate MRR.
-- Pull Slack workspace activity logs for associated client channels.
-- Compute a churn probability score based on revenue decline and activity drop.
-- Output a formatted `rich` terminal table with actionable insights.
-- Support dry-run mode and JSON export.
+## Installation
+```bash
+pip install -e .
+```
 
-## Sprint Status
-- **Meetings Held**: 2
-- **Meetings Left**: 3
-- **Status**: Active (Redesigned)
+## Usage
+```bash
+python -m saaschurn.cli health --dry-run
+python -m saaschurn.cli health --output json
+```
 
-## Completed Work
-- Implemented `saaschurn/` package structure.
-- Implemented `fetchers.py`, `calculators.py`, `reporter.py`, `cli.py`.
-- Created comprehensive `acceptance_tests.py`.
+## Environment Variables
+- `STRIPE_API_TOKEN`
+- `SLACK_API_TOKEN`
 
-## Test Results
-- Pending execution.
-
-## Known Bugs
-- None (Redesign phase).
-
-## Next Steps
-- Run acceptance tests.
-- Fix any failing tests.
+## Testing
+```bash
+pytest tests/ -v --cov=saaschurn
+```
