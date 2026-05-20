@@ -1,21 +1,15 @@
-import os
 import requests
 
-def fetch_active_subscriptions(token):
-    url = "https://api.stripe.com/v1/subscriptions"
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"status": "active"}
-    try:
-        resp = requests.get(url, headers=headers, params=params)
-        resp.raise_for_status()
-        return resp.json().get("data", [])
-    except requests.exceptions.RequestException:
-        return []
+class StripeClient:
+    def __init__(self, api_token):
+        self.api_token = api_token
+        self.base_url = "https://api.stripe.com/v1"
 
-def calc_mrr(subscriptions):
-    total = 0
-    for sub in subscriptions:
-        plan = sub.get("plan", {})
-        amount = plan.get("amount", 0)
-        total += amount / 100
-    return total
+    def get_subscriptions(self):
+        headers = {"Authorization": f"Bearer {self.api_token}"}
+        try:
+            resp = requests.get(f"{self.base_url}/subscriptions", headers=headers)
+            resp.raise_for_status()
+            return resp.json().get("data", [])
+        except Exception:
+            return []
