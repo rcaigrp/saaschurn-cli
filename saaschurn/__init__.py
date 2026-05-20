@@ -1,1 +1,1 @@
-"""SaaSChurn CLI Package."""
+"""SaaS Churn Prediction CLI Tool."""
