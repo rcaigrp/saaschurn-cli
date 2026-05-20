@@ -4,9 +4,7 @@ version = "0.1.0"
 dependencies = [
     "rich",
     "requests",
-    "pytest",
-    "responses",
-    "python-dotenv"
+    "python-dotenv",
 ]
 
 [tool.pytest.ini_options]

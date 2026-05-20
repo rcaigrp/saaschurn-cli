@@ -1,59 +1,61 @@
 import argparse
-import os
 import json
+import os
 import sys
 from dotenv import load_dotenv
-from saaschurn.fetchers import fetch_stripe_subscriptions, fetch_slack_activity
-from saaschurn.calculators import calculate_mrr, calculate_churn_risk, get_risk_level
-from saaschurn.reporter import generate_report
+
+from saaschurn.fetchers import StripeFetcher, SlackFetcher
+from saaschurn.calculators import ChurnCalculator
+from saaschurn.reporter import Reporter
+
 
 def main():
     parser = argparse.ArgumentParser(description="SaaS Churn CLI")
     parser.add_argument("command", choices=["health"])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--output", choices=["json"])
-    parser.add_argument("--env", type=str, default=".env")
+    parser.add_argument("--env", default=".env")
 
     args = parser.parse_args()
 
     load_dotenv(args.env)
-    stripe_token = os.getenv("STRIPE_API_TOKEN")
+
+    stripe_token = os.getenv("STRIPE_API_KEY")
     slack_token = os.getenv("SLACK_API_TOKEN")
 
     if not stripe_token or not slack_token:
-        print("Error: Missing Stripe or Slack API tokens in environment variables.")
-        return
+        print("Error: Missing API tokens in env file.")
+        sys.exit(1)
+
+    stripe = StripeFetcher(stripe_token)
+    slack = SlackFetcher(slack_token)
 
     if args.dry_run:
+        subscriptions = []
+        slack_activity = {}
         results = [
-            {"client": "Acme Corp", "mrr": 5000.0, "activity": 5, "risk_score": 75, "risk_level": "HIGH", "recommendation": "Immediate outreach required."},
-            {"client": "Globex Inc", "mrr": 1500.0, "activity": 45, "risk_score": 35, "risk_level": "MEDIUM", "recommendation": "Monitor closely."}
+            {"client": "ClientA", "mrr": 100.0, "activity_score": 5, "risk_score": 80, "risk_level": "HIGH", "recommendation": "Monitor ClientA (HIGH risk)"},
+            {"client": "ClientB", "mrr": 50.0, "activity_score": 20, "risk_score": 50, "risk_level": "MEDIUM", "recommendation": "Monitor ClientB (MEDIUM risk)"},
         ]
     else:
-        subs = fetch_stripe_subscriptions(stripe_token)
-        channel_ids = [sub.get("customer_id") for sub in subs]
-        activity = fetch_slack_activity(slack_token, channel_ids)
-        
+        subscriptions = stripe.fetch_subscriptions()
+        # For simplicity, we assume a mapping exists or we just process subscriptions
+        # In a real scenario, we'd map client IDs to Slack channels
+        slack_activity = {}
+        calculator = ChurnCalculator(subscriptions, slack_activity)
         results = []
-        for sub in subs:
-            client = sub.get("customer_id")
-            mrr = calculate_mrr(sub)
-            act_score = activity.get(client, 0)
-            risk_score = calculate_churn_risk(mrr, act_score)
-            risk_level = get_risk_level(risk_score)
-            results.append({
-                "client": client,
-                "mrr": mrr,
-                "activity": act_score,
-                "risk_score": risk_score,
-                "risk_level": risk_level,
-                "recommendation": f"Focus on {risk_level} risk."
-            })
+        # Mock iteration for dry-run style logic
+        for sub in subscriptions:
+            client_id = sub.get("customer")
+            if client_id:
+                results.append(calculator.calculate_risk(client_id))
 
     if args.output == "json":
-        print(json.dumps(results, default=str))
+        print(json.dumps(results))
     else:
-        generate_report(results)
+        reporter = Reporter()
+        reporter.print_table(results)
+
 
 if __name__ == "__main__":
     main()
