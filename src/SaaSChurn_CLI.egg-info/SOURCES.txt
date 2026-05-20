@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+src/SaaSChurn_CLI.egg-info/PKG-INFO
+src/SaaSChurn_CLI.egg-info/SOURCES.txt
+src/SaaSChurn_CLI.egg-info/dependency_links.txt
+src/SaaSChurn_CLI.egg-info/requires.txt
+src/SaaSChurn_CLI.egg-info/top_level.txt
+tests/test_fetchers.py

@@ -1,0 +1,7 @@
+stripe
+rich
+requests
+responses
+
+[dev]
+pytest

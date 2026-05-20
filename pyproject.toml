@@ -1,3 +1,20 @@
-[tool.pytest.ini_options]
-addopts = "-v"
-pythonpath = "."
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SaaSChurn-CLI"
+version = "0.1.0"
+description = "SaaS Churn Prediction CLI"
+requires-python = ">=3.11"
+dependencies = [
+    "stripe",
+    "rich",
+    "requests",
+    "responses",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]

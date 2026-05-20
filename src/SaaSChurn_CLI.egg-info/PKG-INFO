@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: SaaSChurn-CLI
+Version: 0.1.0
+Summary: SaaS Churn Prediction CLI
+Requires-Python: >=3.11
+Requires-Dist: stripe
+Requires-Dist: rich
+Requires-Dist: requests
+Requires-Dist: responses
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
