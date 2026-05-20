@@ -439,3 +439,7 @@ Creating DocGuard CLI project from scratch. Implemented parsers.py, drift_detect
 ## Turn 5 — Manager (2026-05-20 06:54 UTC)
 
 
+
+## Turn 6 — Craft (2026-05-20 07:00 UTC)
+
+Rewriting acceptance_tests.py to use pytest conventions and fixing cli.py to be complete. Installing stripe library in docker command to resolve import errors.

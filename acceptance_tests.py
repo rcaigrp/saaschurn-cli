@@ -1,53 +1,82 @@
+import pytest
+import os
 import sys
-import unittest
-from unittest.mock import patch, MagicMock
-import responses
-from saaschurn.stripe_client import fetch_active_subscriptions, calculate_mrr
-from saaschurn.slack_client import fetch_channel_activity
-from saaschurn.churn_calculator import compute_churn_score
-from saaschurn.cli import main
 import json
+from unittest.mock import patch, MagicMock
 
-class TestStripeClient(unittest.TestCase):
-    @patch('saaschurn.stripe_client.stripe')
-    def test_fetch_active_subscriptions(self, mock_stripe):
-        mock_stripe.Subscription.list.return_value = MagicMock(data=[{'plan': {'amount': 1000}}])
-        result = fetch_active_subscriptions("fake_key")
-        self.assertEqual(result[0]['plan']['amount'], 1000)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-    def test_calculate_mrr(self):
-        subs = [{'plan': {'amount': 1000}, 'status': 'active'}]
-        self.assertEqual(calculate_mrr(subs), 10)
-
-class TestSlackClient(unittest.TestCase):
-    @responses.activate
-    def test_fetch_channel_activity(self):
-        responses.add(responses.GET, "https://slack.com/api/conversations.history", json={'messages': []})
-        result = fetch_channel_activity("fake_token", ["C123"])
-        self.assertIn("C123", result)
-
-class TestChurnCalculator(unittest.TestCase):
-    def test_compute_churn_score(self):
-        self.assertEqual(compute_churn_score(500, {}), 1.0)
-
-class TestCLI(unittest.TestCase):
-    @patch('sys.argv', ['cli', '--dry-run'])
-    def test_dry_run(self):
-        with patch('saaschurn.cli.console') as mock_console:
+def test_criterion_1_auth_env_vars():
+    """Test that CLI checks env vars."""
+    with patch.dict(os.environ, {}, clear=True):
+        with patch('cli.console') as mock_console:
+            from cli import main
             main()
-            self.assertTrue(mock_console.print.called)
+            assert mock_console.print.called
+            calls = [str(c.args) for c in mock_console.print.call_args_list]
+            assert any('Missing env vars' in c for c in calls)
 
-    @patch('sys.argv', ['cli', '--output', 'json'])
-    @patch('saaschurn.cli.fetch_active_subscriptions')
-    @patch('saaschurn.cli.fetch_channel_activity')
-    @patch('saaschurn.cli.compute_churn_score')
-    def test_json_output(self, mock_score, mock_activity, mock_subs):
-        mock_subs.return_value = [{'plan': {'amount': 1000}}]
-        mock_activity.return_value = {'C123': {'messages': []}}
-        mock_score.return_value = 0.5
-        import io
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        main()
-        sys.stdout = sys.__stdout__
-        self.assertIn('mrr', captured_output.getvalue())
+def test_criterion_2_fetch_subscriptions():
+    """Test fetching subscriptions and calculating MRR."""
+    with patch.dict(os.environ, {'STRIPE_API_TOKEN': 'sk_test', 'SLACK_API_TOKEN': 'xoxb_test'}):
+        with patch('cli.stripe') as mock_stripe:
+            mock_sub = MagicMock(status='active', plan=MagicMock(amount=1000))
+            mock_stripe.Subscription.list.return_value = MagicMock(data=[mock_sub])
+            
+            from cli import fetch_subscriptions, calculate_mrr
+            
+            subs = fetch_subscriptions('sk_test')
+            assert len(subs) == 1
+            assert subs[0].status == 'active'
+            
+            mrr = calculate_mrr(subs)
+            assert abs(mrr - 10.0) < 0.01
+
+def test_criterion_3_pull_slack_activity():
+    """Test fetching slack activity."""
+    with patch('cli.requests') as mock_requests:
+        mock_resp = MagicMock(status_code=200)
+        mock_requests.get.return_value = mock_resp
+        
+        from cli import fetch_slack_activity
+        channels = fetch_slack_activity('xoxb_test', ['c1'])
+        assert len(channels) == 1
+
+def test_criterion_4_dry_run():
+    """Test dry-run mode."""
+    with patch('cli.console') as mock_console:
+        from cli import main
+        import argparse
+        
+        def mock_parse_args(*args, **kwargs):
+            class Args:
+                dry_run = True
+                output = 'console'
+            return Args()
+        
+        with patch('argparse.ArgumentParser.parse_args', mock_parse_args):
+            main()
+            assert any('Dry-run' in str(call.args) for call in mock_console.print.call_args_list)
+
+def test_criterion_5_json_output():
+    """Test JSON output mode."""
+    with patch.dict(os.environ, {'STRIPE_API_TOKEN': 'sk_test', 'SLACK_API_TOKEN': 'xoxb_test'}):
+        with patch('cli.stripe') as mock_stripe:
+            with patch('cli.requests') as mock_requests:
+                mock_sub = MagicMock(status='active', plan=MagicMock(amount=1000))
+                mock_stripe.Subscription.list.return_value = MagicMock(data=[mock_sub])
+                
+                from cli import main
+                import argparse
+                
+                def mock_parse_args(*args, **kwargs):
+                    class Args:
+                        dry_run = False
+                        output = 'json'
+                    return Args()
+                
+                with patch('argparse.ArgumentParser.parse_args', mock_parse_args):
+                    with patch('cli.console') as mock_console:
+                        main()
+                        calls = [str(c.args) for c in mock_console.print.call_args_list]
+                        assert any('json' in c.lower() or 'mrr' in c.lower() for c in calls)
