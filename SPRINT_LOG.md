@@ -290,3 +290,7 @@ Rewrote all project files to ensure completeness and fix previous failures. Crea
 ## Turn 37 — Manager (2026-05-20 05:06 UTC)
 
 Complete rewrite of SaaSChurn-CLI project from scratch with proper module structure, mockable API wrappers, and comprehensive acceptance tests.
+
+## Turn 38 — Craft (2026-05-20 05:14 UTC)
+
+Rewrote the entire SaaSChurn-CLI project from scratch to ensure robust API mocking, deterministic churn calculation logic, and stable CLI argument parsing. Fixed fetchers.py to safely handle 429 rate limits without AttributeError. Created comprehensive unit tests for fetchers, calculators, and CLI using responses and unittest.mock. Added acceptance_tests.py to validate all 7 criteria. Installed pytest-cov for coverage tracking.
