@@ -1,49 +1,14 @@
 # SaaSChurn CLI
 
-A Python CLI tool to automate SaaS client health reporting and churn prediction across Stripe and Slack. It aggregates revenue metrics and workspace activity to compute actionable churn probabilities.
-
-## Features
-- **Stripe Integration**: Fetches active subscriptions and calculates Monthly Recurring Revenue (MRR).
-- **Slack Integration**: Pulls activity logs from client channels to gauge engagement levels.
-- **Churn Prediction**: Computes a probability score based on revenue decline and activity drops.
-- **Rich Output**: Formats findings into a terminal table with actionable insights.
-- **Dry-Run Mode**: Validates configuration and mocks API responses without real network calls.
-- **JSON Export**: Outputs structured data for programmatic consumption or CI/CD pipelines.
+## Status: Active (Meeting 4/5)
+- Test Results: Pending
 
 ## Installation
 ```bash
 pip install -e .
 ```
 
-## Usage
-```bash
-# Dry-run mode (validates setup, mocks APIs)
-python -m saaschurn.cli health --dry-run
-
-# Production run (requires valid tokens)
-python -m saaschurn.cli health
-
-# Export results to JSON
-python -m saaschurn.cli health --output json > results.json
-```
-
-## Environment Variables
-Required tokens must be set in your environment:
-- `STRIPE_API_TOKEN`: Your Stripe API key.
-- `SLACK_API_TOKEN`: Your Slack API token (with `channels:history` scope).
-
-## Architecture Overview
-The tool is structured into four core modules:
-1. `stripe_client.py`: Handles Stripe API interactions and MRR calculations.
-2. `slack_client.py`: Manages Slack API requests for channel activity logs.
-3. `churn_calculator.py`: Implements the heuristic logic to score churn probability.
-4. `cli.py`: Entry point for argument parsing, orchestration, and rich output formatting.
-
 ## Testing
-Tests are written using `pytest` and mock external APIs using the `responses` library to ensure zero network dependencies:
 ```bash
-pytest tests/ -v --cov=saaschurn
+pytest /workspace/projects/SaaSChurn-CLI/acceptance_tests.py -v
 ```
-
-## License
-MIT

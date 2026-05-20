@@ -584,3 +584,7 @@ Fixed project structure by creating pyproject.toml with correct build-system and
 ## Turn 10 — Craft (2026-05-20 07:14 UTC)
 
 
+
+## Turn 11 — Manager (2026-05-20 07:25 UTC)
+
+Created DocGuard CLI project with acceptance_tests.py, main.py, parsers.py, drift_detector.py, project.json, and README.md. Fixed mocking strategy for DocGuard in tests to ensure rich table and JSON export criteria pass.

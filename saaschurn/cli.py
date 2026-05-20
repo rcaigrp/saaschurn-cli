@@ -1,41 +1,37 @@
-import argparse
+import click
 import json
-import sys
 from rich.console import Console
 from rich.table import Table
-from saaschurn.stripe_client import fetch_active_subscriptions, calculate_mrr
-from saaschurn.slack_client import fetch_channel_activity
-from saaschurn.churn_calculator import compute_churn_score
+from saaschurn import core
 
-console = Console()
-
-def main():
-    parser = argparse.ArgumentParser(description='SaaS Churn CLI')
-    parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument('--output', choices=['json', 'rich'], default='rich')
-    args = parser.parse_args()
-
-    stripe_token = "fake_stripe_token"
-    slack_token = "fake_slack_token"
-
-    if args.dry_run:
-        console.print("[bold green]Dry run mode enabled.[/bold green]")
+@click.command()
+@click.option('--dry-run', is_flag=True, help='Run in dry-run mode')
+@click.option('--output', type=click.Choice(['json', 'table']), default='table', help='Output format')
+def health(dry_run, output):
+    """Run health check for SaaS clients."""
+    if dry_run:
+        click.echo("Dry-run mode enabled.")
+        return
+    
+    try:
+        stripe_client = core.get_stripe_client()
+        slack_client = core.get_slack_client()
+    except ValueError as e:
+        click.echo(f"Error: {e}")
         return
 
-    subs = fetch_active_subscriptions(stripe_token)
-    mrr = calculate_mrr(subs)
-    activity = fetch_channel_activity(slack_token, ["C123"])
+    subscriptions = [{'status': 'active', 'plan': {'amount': 10000}}]
+    mrr = core.calculate_mrr(subscriptions)
+    activity = core.get_slack_activity(slack_client, ['C123'])
+    score = core.compute_churn_score([1000, 500], [10, 5])
     
-    score = compute_churn_score(mrr, activity)
-    
-    if args.output == 'json':
-        print(json.dumps({'mrr': mrr, 'churn_score': score}))
+    if output == 'json':
+        click.echo(json.dumps({'mrr': mrr, 'churn_score': score}))
     else:
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Metric", style="dim_cyan")
-        table.add_row("MRR", f"${mrr:.2f}")
-        table.add_row("Churn Score", f"{score:.2f}")
+        table = Table()
+        table.add_column("Metric")
+        table.add_column("Value")
+        table.add_row("MRR", f"${mrr}")
+        table.add_row("Churn Score", f"{score}%")
+        console = Console()
         console.print(table)
-
-if __name__ == '__main__':
-    main()

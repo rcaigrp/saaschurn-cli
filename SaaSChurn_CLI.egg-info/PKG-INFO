@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: SaaSChurn-CLI
+Version: 0.1.0
+Requires-Dist: stripe
+Requires-Dist: slack_sdk
+Requires-Dist: rich
+Requires-Dist: click
+Dynamic: requires-dist

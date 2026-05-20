@@ -1,38 +1,37 @@
 import os
-import requests
-import time
+import stripe
+import responses
+from typing import List, Dict, Any
 
 
-def fetch_stripe_subscriptions(token):
-    headers = {"Authorization": f"Bearer {token}"}
-    url = "https://api.stripe.com/v1/subscriptions"
-    all_subs = []
-    params = {"status": "active"}
-    while True:
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            all_subs.extend(data.get("data", []))
-            if not data.get("has_more"):
-                break
-            params["starting_after"] = data.get("next_cursor")
-            time.sleep(0.1)
-        except requests.HTTPError as e:
-            print(f"Stripe API Error: {e}")
-            break
-    return all_subs
+def fetch_subscriptions() -> List[Dict[str, Any]]:
+    stripe.api_key = os.environ.get('STRIPE_API_TOKEN')
+    subscriptions = stripe.Subscription.list(limit=100)
+    active = []
+    for sub in subscriptions.data:
+        if sub.status == 'active':
+            active.append({
+                'id': sub.id,
+                'customer_id': sub.customer,
+                'plan': sub.items.data[0].plan.nickname if sub.items.data else 'Unknown',
+                'mrr': sub.items.data[0].plan.amount / 100 if sub.items.data else 0,
+                'created': sub.created
+            })
+    return active
 
 
-def fetch_slack_activity(token, channel_id):
-    headers = {"Authorization": f"Bearer {token}"}
-    url = "https://slack.com/api/conversations.history"
-    params = {"channel": channel_id, "limit": 100}
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("messages", [])
-    except requests.HTTPError as e:
-        print(f"Slack API Error: {e}")
-        return []
+def fetch_slack_activity() -> List[Dict[str, Any]]:
+    from slack_sdk import WebClient
+    client = WebClient(token=os.environ.get('SLACK_API_TOKEN'))
+    channels = client.conversations_list()
+    activity = []
+    for channel in channels.get('channels', []):
+        if channel.get('name', '').startswith('client-'):
+            messages = client.conversations_history(channel=channel['id'], limit=50)
+            messages_list = messages.get('messages', [])
+            activity.append({
+                'channel': channel['name'],
+                'message_count': len(messages_list),
+                'last_message': messages_list[-1].get('text', '') if messages_list else ''
+            })
+    return activity

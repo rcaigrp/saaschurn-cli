@@ -1,0 +1,4 @@
+stripe
+slack_sdk
+rich
+click
