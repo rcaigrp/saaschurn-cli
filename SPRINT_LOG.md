@@ -97,3 +97,7 @@ Fixed project structure by adding pyproject.toml, rewriting all modules with pro
   }
 }
 ```
+
+## Turn 4 — Craft (2026-05-20 00:58 UTC)
+
+Rewrote the entire project structure to fix pip install errors. Created pyproject.toml, saaschurn/__init__.py, saaschurn/cli.py, saaschurn/fetchers.py, saaschurn/calculators.py, saaschurn/reporter.py, and tests/. Used responses library for mocking APIs in tests.

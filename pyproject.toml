@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools", "wheel"]
-build-backend = "setuptools"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "saaschurn"
@@ -13,8 +13,9 @@ dependencies = [
     "python-dotenv",
 ]
 
-[project.scripts]
-saaschurn = "saaschurn.cli:main"
-
-[tool.setuptools]
-packages = ["saaschurn"]
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "responses",
+]

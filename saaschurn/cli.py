@@ -1,47 +1,49 @@
-"""CLI interface for SaaSChurn."""
 import argparse
 import json
-import sys
+import os
+
 from saaschurn.fetchers import StripeFetcher, SlackFetcher
 from saaschurn.calculators import ChurnCalculator
 from saaschurn.reporter import Reporter
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SaaS Churn CLI Tool')
-    parser.add_argument('command', choices=['health'], help='Command to run')
-    parser.add_argument('--dry-run', action='store_true', help='Use mock data instead of API calls')
-    parser.add_argument('--output', choices=['json'], help='Export results as JSON')
-    
+    parser = argparse.ArgumentParser(description="SaaS Churn CLI Tool")
+    parser.add_argument("command", choices=["health"])
+    parser.add_argument("--dry-run", action="store_true", help="Use mock data")
+    parser.add_argument("--output", choices=["json", "console"], default="console", help="Output format")
+    parser.add_argument("--env", type=str, default=".env", help="Path to .env file")
+
     args = parser.parse_args()
-    
-    if args.command == 'health':
-        fetcher = StripeFetcher()
-        slack_fetcher = SlackFetcher()
-        calculator = ChurnCalculator()
-        reporter = Reporter()
-        
-        # Fetch data
+
+    if args.command == "health":
+        load_env(args.env)
+
+        stripe = StripeFetcher(stripe_api_key=os.getenv("STRIPE_API_KEY"))
+        slack = SlackFetcher(slack_api_token=os.getenv("SLACK_API_TOKEN"))
+
         if args.dry_run:
-            subscriptions = fetcher.get_mock_subscriptions()
-            slack_activity = slack_fetcher.get_mock_activity()
+            stripe = StripeFetcher(mock=True)
+            slack = SlackFetcher(mock=True)
+
+        subscriptions = stripe.fetch_active_subscriptions()
+        channel_activity = slack.fetch_channel_activity()
+
+        calculator = ChurnCalculator(subscriptions, channel_activity)
+        results = calculator.calculate_churn_risk()
+
+        reporter = Reporter(results)
+
+        if args.output == "json":
+            print(json.dumps(results, indent=2))
         else:
-            try:
-                subscriptions = fetcher.get_active_subscriptions()
-                slack_activity = slack_fetcher.get_channel_activity()
-            except Exception as e:
-                print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
-        
-        # Calculate churn
-        results = calculator.calculate_risk(subscriptions, slack_activity)
-        
-        # Output
-        if args.output == 'json':
-            print(json.dumps(results))
-        else:
-            reporter.print_table(results)
+            reporter.print_table()
 
 
-if __name__ == '__main__':
+def load_env(path):
+    from dotenv import load_dotenv
+    load_dotenv(path)
+
+
+if __name__ == "__main__":
     main()
