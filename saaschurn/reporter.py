@@ -1,24 +1,22 @@
-from rich.table import Table
 from rich.console import Console
+from rich.table import Table
 
-
-def print_report(data):
+def generate_report(results):
     console = Console()
-    table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Client", style="dim")
-    table.add_column("MRR", style="green")
-    table.add_column("Activity Score", style="yellow")
-    table.add_column("Churn Risk", style="red")
-    table.add_column("Recommendation", style="bold")
-
-    for row in data:
-        risk = row["churn_risk"]
-        style = "green" if risk < 30 else ("yellow" if risk < 70 else "red")
+    table = Table(show_header=True, header_style="bold blue")
+    table.add_column("Client")
+    table.add_column("MRR")
+    table.add_column("Activity Score")
+    table.add_column("Churn Risk")
+    table.add_column("Recommendation")
+    for res in results:
+        risk = res.get("risk_level")
+        style = "green" if risk == "LOW" else ("yellow" if risk == "MEDIUM" else "red")
         table.add_row(
-            row["client"],
-            f"${row['mrr']:.2f}",
-            str(row["activity_score"]),
-            str(risk),
-            row["recommendation"]
+            res["client"],
+            f"${res['mrr']:.2f}",
+            str(res["activity_score"]),
+            f"{res['risk_score']} ({risk})",
+            res["recommendation"]
         )
     console.print(table)

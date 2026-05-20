@@ -1,60 +1,42 @@
-import os
 import requests
-import time
+import os
 
-
-def fetch_stripe_subscriptions(token):
+def fetch_stripe_data(api_key):
     url = "https://api.stripe.com/v1/subscriptions"
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"limit": 100}
+    headers = {"Authorization": f"Bearer {api_key}"}
+    params = {"status": "active"}
     all_subs = []
-
-    # Pagination
     while True:
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            all_subs.extend(data.get("data", []))
-            if not data.get("has_more"):
-                break
-            cursor = data.get("next_cursor")
-            if cursor:
-                params["starting_after"] = cursor
-            else:
-                break
-
-        except requests.exceptions.HTTPError as e:
-            print(f"Stripe API Error: {e}")
+        resp = requests.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        for sub in data.get("data", []):
+            mrr = sub.get("amount", 0) / 100
+            all_subs.append({"id": sub.get("id"), "customer": sub.get("customer"), "mrr": mrr})
+        if not data.get("has_more"):
             break
-
-        # Rate limit handling (429)
-        if response.status_code == 429:
-            print("Stripe rate limited. Sleeping...")
-            time.sleep(2 ** (2 - 1))
-            continue
-
+        params["starting_after"] = data.get("next_cursor")
     return all_subs
 
-
-def fetch_slack_activity(token, client_channels):
+def fetch_slack_data(token, channels=None):
     url = "https://slack.com/api/conversations.history"
     headers = {"Authorization": f"Bearer {token}"}
-    activity = {}
-
-    for channel_id in client_channels:
-        params = {"channel": channel_id, "limit": 100, "inclusive": "true"}
+    results = {}
+    if not channels:
+        return results
+    for ch in channels:
+        params = {"channel": ch, "limit": 10}
         try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            messages = data.get("messages", [])
-            # Filter last 30 days
-            cutoff = time.time() - (30 * 24 * 60 * 60)
-            count = sum(1 for m in messages if float(m.get("ts", 0)) > cutoff)
-            activity[channel_id] = count
-        except requests.exceptions.HTTPError as e:
-            print(f"Slack API Error: {e}")
-            continue
+            resp = requests.get(url, headers=headers, params=params)
+            resp.raise_for_status()
+            messages = resp.json().get("messages", [])
+            results[ch] = len(messages)
+        except requests.exceptions.HTTPError:
+            pass
+    return results
 
-    return activity
+def get_mock_stripe_data():
+    return [{"id": "sub_1", "customer": "cust_1", "mrr": 100.0}, {"id": "sub_2", "customer": "cust_2", "mrr": 50.0}]
+
+def get_mock_slack_data():
+    return {"channel_1": 50, "channel_2": 5}
