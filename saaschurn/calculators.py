@@ -1,32 +1,14 @@
-def calculate_churn_risk(mrr: float, activity_score: int) -> dict:
-    """Calculate churn risk score (0-100) based on MRR and Slack activity."""
-    score = 50  # Base score
+def calculate_mrr(sub):
+    """Calculate MRR for a subscription."""
+    unit_amount = sub.get('plan', {}).get('unit_amount', 0)
+    return unit_amount / 100  # Stripe uses cents
 
-    # MRR decline logic
-    if mrr < 100:
-        score += 10
 
-    # Slack activity logic
+def calculate_churn_risk(mrr, activity_score):
+    """Calculate churn risk score (0-100)."""
+    base_score = 50
+    if mrr < 1000:  # Example threshold
+        base_score += 10
     if activity_score < 10:
-        score += 20
-    elif activity_score < 50:
-        score += 10
-
-    # Cap at 0-100
-    score = max(0, min(100, score))
-
-    if score < 30:
-        level = "LOW"
-        recommendation = "Healthy engagement."
-    elif score <= 70:
-        level = "MEDIUM"
-        recommendation = "Monitor closely."
-    else:
-        level = "HIGH"
-        recommendation = "At risk of churn."
-
-    return {
-        "risk_score": score,
-        "risk_level": level,
-        "recommendation": recommendation
-    }
+        base_score += 20
+    return min(base_score, 100)

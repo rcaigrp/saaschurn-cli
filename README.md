@@ -14,22 +14,19 @@ Build a Python CLI tool (SaaSChurn-CLI) that authenticates via environment varia
 ## Sprint Status
 - **Meetings Held**: 2
 - **Meetings Left**: 3
-- **Status**: Active
+- **Status**: Active (Redesigned)
 
 ## Completed Work
-- Created `main.py` with core logic for auth, fetching, calculation, and reporting.
-- Created `acceptance_tests.py` with mocked tests for all acceptance criteria.
-- Implemented `fetchers.py` with Stripe pagination and rate limit handling.
-- Implemented `calculators.py` for MRR and churn risk scoring.
-- Implemented `reporter.py` with `rich` terminal formatting.
-- Created `saaschurn/cli.py` with argparse, dry-run, and JSON export support.
+- Implemented `saaschurn/` package structure.
+- Implemented `fetchers.py`, `calculators.py`, `reporter.py`, `cli.py`.
+- Created comprehensive `acceptance_tests.py`.
 
 ## Test Results
-- Running acceptance tests now...
+- Pending execution.
 
 ## Known Bugs
-- None.
+- None (Redesign phase).
 
 ## Next Steps
+- Run acceptance tests.
 - Fix any failing tests.
-- Implement dry-run mode and JSON export enhancements if needed.

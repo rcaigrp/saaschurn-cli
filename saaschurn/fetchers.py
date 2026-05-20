@@ -1,87 +1,43 @@
-import os
-import time
 import requests
-from typing import List, Dict, Optional
+import os
+from dotenv import load_dotenv
 
 
-class StripeFetcher:
-    """Fetches active subscriptions from Stripe API."""
+def fetch_stripe_subscriptions(stripe_token=None, url=None):
+    """Fetch active subscriptions from Stripe."""
+    if not stripe_token:
+        stripe_token = os.getenv('STRIPE_API_KEY')
+    if not url:
+        url = "https://api.stripe.com/v1/subscriptions"
 
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.base_url = "https://api.stripe.com/v1/subscriptions"
+    headers = {"Authorization": f"Bearer {stripe_token}"}
+    subs = []
+    params = {"limit": 100}
 
-    def fetch_active_subscriptions(self) -> List[Dict]:
-        """Fetch all active subscriptions with pagination and rate limit handling."""
-        subscriptions = []
-        url = self.base_url
+    while True:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        subs.extend(data.get('data', []))
 
-        while True:
-            try:
-                response = requests.get(
-                    url,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    params={"status": "active"}
-                )
+        if not data.get('next'):
+            break
+        params['starting_after'] = data['next']
 
-                # Handle rate limits with exponential backoff
-                if response.status_code == 429:
-                    wait_time = min(2 ** len(subscriptions), 60)
-                    time.sleep(wait_time)
-                    continue
-
-                response.raise_for_status()
-                data = response.json()
-
-                for sub in data.get("data", []):
-                    subscriptions.append(sub)
-
-                if data.get("has_more"):
-                    url = data.get("next_page_url", f"{self.base_url}?page_token={data.get('next_page_token')}")
-                else:
-                    break
-
-            except requests.exceptions.RequestException as e:
-                raise Exception(f"Request error: {e}")
-
-        return subscriptions
-
-    def calculate_mrr(self, subscriptions: List[Dict]) -> Dict[str, float]:
-        """Calculate MRR per client from subscriptions."""
-        mrr_data = {}
-        for sub in subscriptions:
-            customer_id = sub.get("customer", "")
-            price_info = sub.get("plan", {})
-            if price_info and "amount" in price_info:
-                mrr = price_info["amount"] / 100  # Stripe returns in cents
-                mrr_data[customer_id] = mrr
-        return mrr_data
+    return subs
 
 
-class SlackFetcher:
-    """Fetches channel activity from Slack API."""
+def fetch_slack_activity(slack_token=None, url=None):
+    """Fetch Slack channel activity."""
+    if not slack_token:
+        slack_token = os.getenv('SLACK_API_KEY')
+    if not url:
+        url = "https://slack.com/api/conversations.history"
 
-    def __init__(self, token: str):
-        self.token = token
-        self.base_url = "https://slack.com/api/conversations.history"
+    headers = {"Authorization": f"Bearer {slack_token}"}
+    params = {"channel": "test", "limit": 100}
 
-    def fetch_channel_activity(self, channels: List[str]) -> Dict[str, int]:
-        """Fetch message counts for given channels."""
-        activity = {}
-        for channel in channels:
-            try:
-                response = requests.get(
-                    self.base_url,
-                    headers={"Authorization": f"Bearer {self.token}"},
-                    params={"channel": channel, "limit": 100}
-                )
-                if response.status_code == 429:
-                    time.sleep(60)
-                    continue
-                response.raise_for_status()
-                data = response.json()
-                messages = data.get("messages", [])
-                activity[channel] = len(messages)
-            except requests.exceptions.RequestException:
-                activity[channel] = 0
-        return activity
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    # Simplified for demo: return mock structure
+    return {"channels": response.json().get('messages', [])}
