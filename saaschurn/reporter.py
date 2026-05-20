@@ -1,33 +1,38 @@
 from rich.console import Console
 from rich.table import Table
 
-console = Console()
 
-def print_report(results):
-    table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Client")
-    table.add_column("MRR")
-    table.add_column("Activity Score")
-    table.add_column("Churn Risk")
-    table.add_column("Recommendation")
+class ReportGenerator:
+    """Generates formatted reports using rich."""
 
-    for r in results:
-        risk = r.get("churn_risk", 0)
-        rec = "Review"
-        if risk > 70:
-            rec = "High Churn Risk"
-        elif risk > 30:
-            rec = "Monitor"
-        else:
-            rec = "Healthy"
-        
-        color = "green" if risk <= 30 else ("yellow" if risk <= 70 else "red")
-        console.print(f"[{color}]{r.get('client')}[/]") # Just for demo
-        table.add_row(
-            r.get("client", "N/A"),
-            f"${r.get('mrr', 0):.2f}",
-            str(r.get("activity_score", 0)),
-            str(r.get("churn_risk", 0)),
-            rec
-        )
-    console.print(table)
+    def __init__(self, results):
+        self.results = results
+        self.console = Console()
+
+    def generate_report(self):
+        """Generate and print the report table."""
+        table = Table(show_header=True, header_style='bold cyan')
+        table.add_column('Client', style='white')
+        table.add_column('MRR', style='green')
+        table.add_column('Activity Score', style='yellow')
+        table.add_column('Churn Risk', style='bold')
+        table.add_column('Recommendation', style='blue')
+
+        for result in self.results:
+            risk = result.get('churn_risk', 'MEDIUM')
+            if risk == 'LOW':
+                color = 'green'
+            elif risk == 'MEDIUM':
+                color = 'yellow'
+            else:
+                color = 'red'
+
+            table.add_row(
+                result.get('client', 'Unknown'),
+                f"${result.get('mrr', 0):.2f}",
+                str(result.get('activity_score', 0)),
+                f'[{color}]{risk}[/]',
+                result.get('recommendation', 'N/A')
+            )
+
+        self.console.print(table)
