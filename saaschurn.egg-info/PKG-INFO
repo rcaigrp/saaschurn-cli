@@ -1,8 +1,12 @@
 Metadata-Version: 2.4
 Name: saaschurn
 Version: 0.1.0
-Summary: SaaS Churn CLI
+Summary: SaaS Churn CLI Tool
 Requires-Python: >=3.9
-Requires-Dist: requests
 Requires-Dist: rich
+Requires-Dist: requests
 Requires-Dist: python-dotenv
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
