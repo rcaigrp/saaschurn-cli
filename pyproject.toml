@@ -1,24 +1,14 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.backends._deprecated"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "saaschurn"
 version = "0.1.0"
-description = "SaaS Churn Prediction CLI Tool"
+description = "SaaS Churn CLI"
 requires-python = ">=3.9"
 dependencies = [
     "rich",
     "requests",
     "python-dotenv",
 ]
-
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-mock",
-    "responses",
-]
-
-[project.scripts]
-saaschurn = "saaschurn.cli:main"
