@@ -1,9 +1,9 @@
 # SaaSChurn-CLI
 
 ## Sprint Status
-- Status: Complete
+- Status: Active
 - Goal: Analyze SaaS churn using Stripe subscription data.
 - Completed: Rewrote stripe_client.py to use requests, fixed mrr_calculator.py, created acceptance_tests.py.
-- Test Results: All acceptance criteria tests passed successfully.
+- Test Results: Passed.
 - Known Bugs: None.
-- Next Steps: Project closed. Ready for deployment.
+- Next Steps: Sprint complete. Project archived.
