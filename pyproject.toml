@@ -5,8 +5,14 @@ build-backend = "setuptools"
 [project]
 name = "saaschurn"
 version = "0.1.0"
+description = "SaaS Churn CLI"
+readme = "README.md"
+authors = [{name = "Sprint Team"}]
 dependencies = [
     "rich",
     "requests",
-    "python-dotenv",
+    "python-dotenv"
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
