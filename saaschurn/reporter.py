@@ -1,15 +1,27 @@
 from rich.console import Console
 from rich.table import Table
 
-def generate_report(data):
-    console = Console()
+console = Console()
+
+def generate_report(clients_data):
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Client", style="dim")
-    table.add_column("MRR")
-    table.add_column("Churn Risk")
-    
-    for client, info in data.items():
-        risk = info.get('risk_score', 0)
-        color = "green" if risk < 30 else ("yellow" if risk < 70 else "red")
-        table.add_row(client, f"${info.get('mrr', 0):.2f}", f"{risk}", style=color)
+    table.add_column("MRR", style="green")
+    table.add_column("Activity", style="yellow")
+    table.add_column("Risk", style="red")
+    table.add_column("Recommendation", style="blue")
+
+    for client, data in clients_data.items():
+        mrr = data["mrr"]
+        activity = data["activity"]
+        risk = data["risk"]
+        risk_level = data["risk_level"]
+        rec = data["recommendation"]
+        table.add_row(
+            client,
+            f"${mrr:.2f}",
+            str(activity),
+            risk_level,
+            rec
+        )
     console.print(table)
